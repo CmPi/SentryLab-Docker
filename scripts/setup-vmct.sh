@@ -145,8 +145,8 @@ echo "Deploying files..."
 pct push "$VMID" "$TEMPLATES_DIR/discovery.py" "$DEPLOY_PATH/discovery.py"
 echo "✓ Copied: discovery.py"
 
-pct push "$VMID" "$TEMPLATES_DIR/monitoring.py" "$DEPLOY_PATH/monitoring.py"
-echo "✓ Copied: monitoring.py"
+pct push "$VMID" "$TEMPLATES_DIR/monitor.py" "$DEPLOY_PATH/monitor.py"
+echo "✓ Copied: monitor.py"
 
 pct push "$VMID" "$TEMPLATES_DIR/startup.sh" "$DEPLOY_PATH/startup.sh"
 echo "✓ Copied: startup.sh"
@@ -208,7 +208,7 @@ echo ""
 
 # Make scripts executable
 exec_cmd chmod +x "$DEPLOY_PATH/discovery.py"
-exec_cmd chmod +x "$DEPLOY_PATH/monitoring.py"
+exec_cmd chmod +x "$DEPLOY_PATH/monitor.py"
 exec_cmd chmod +x "$DEPLOY_PATH/startup.sh"
 
 # Start the service

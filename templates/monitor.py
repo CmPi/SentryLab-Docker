@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-@file monitoring.py
+@file monitor.py
 @author CmPi <github.com/CmPi>
 @brief Docker Container Monitoring Script
-@date 2025-01-11
-@version 1.0.0
+@date 2026-01-11
+@version 0.1.11
 
 Continuously monitors Docker containers and publishes status to MQTT
 """

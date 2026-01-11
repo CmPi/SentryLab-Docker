@@ -83,7 +83,7 @@ This will:
 
 /usr/local/share/sentrylab/templates/
 ├── discovery.py               # HA discovery script
-├── monitoring.py              # Container monitoring script
+├── monitor.py                 # Container monitoring script
 ├── compose.yml                # Docker Compose config
 └── startup.sh                 # Container startup script
 ```
@@ -93,7 +93,7 @@ This will:
 ```
 /opt/sentrylab/
 ├── discovery.py
-├── monitoring.py
+├── monitor.py
 ├── startup.sh
 ├── compose.yml
 ├── .env                       # Instance-specific config

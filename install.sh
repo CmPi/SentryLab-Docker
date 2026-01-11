@@ -5,7 +5,7 @@
 # @repo https://github.com/CmPi/SentryLab-Docker
 # @brief Root installation script for SentryLab-Docker
 # @date creation 2026-01-11
-# @version 1.0.11
+# @version 0.1.11
 # @usage sudo ./install.sh
 #
 

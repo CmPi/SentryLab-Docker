@@ -16,7 +16,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - DEPLOY_PATH/discovery.py:/app/discovery.py:ro
-      - DEPLOY_PATH/monitoring.py:/app/monitoring.py:ro
+      - DEPLOY_PATH/monitor.py:/app/monitor.py:ro
       - DEPLOY_PATH/startup.sh:/app/startup.sh:ro
       - DEPLOY_PATH/VERSION:/app/VERSION:ro
       - DEPLOY_PATH/logs:/logs
@@ -24,7 +24,7 @@ services:
       - DEPLOY_PATH/.env
     entrypoint: ["/bin/sh", "/app/startup.sh"]
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "monitoring.py"]
+      test: ["CMD", "pgrep", "-f", "monitor.py"]
       interval: 30s
       timeout: 10s
       retries: 3
