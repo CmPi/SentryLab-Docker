@@ -30,6 +30,8 @@
 
 set -e
 
+PROXMOX_NODE=$(hostname -s)
+
 CONFIG_FILE="/usr/local/etc/sentrylab.conf"
 TEMPLATES_DIR="/usr/local/share/sentrylab/templates"
 UTILS_FILE="/usr/local/bin/sentrylab/utils.sh"
@@ -94,7 +96,8 @@ echo ""
 
 # Check if VM/CT exists
 if ! pct status "$VMID" &>/dev/null && ! qm status "$VMID" &>/dev/null; then
-    echo "ERROR: VM/CT $VMID not found"
+    
+    echo "ERROR: VM/CT $VMID not found on node $PROXMOX_NODE"
     echo ""
     echo "Available containers:"
     pct list 2>/dev/null || echo "  (none)"
@@ -121,7 +124,7 @@ if [ -z "$VM_NAME" ]; then
 fi
 
 # Generate device identifiers
-DEVICE_NAME="Docker ${VM_NAME}"
+DEVICE_NAME="${VM_NAME} (${VM_TYPE})"
 DEVICE_ID="docker_$(echo $VM_NAME | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_')"
 
 echo "VM/CT ID:    $VMID"
@@ -159,59 +162,74 @@ exec_cmd() {
     fi
 }
 
-# Check if Docker is installed
-echo "Checking Docker installation..."
-if ! exec_cmd which docker &>/dev/null; then
-    echo "ERROR: Docker is not installed on $VM_TYPE $VMID"
-    echo ""
-    echo "To install Docker, enter the CT and run:"
-    echo "  pct enter $VMID"
-    echo "  curl -fsSL https://get.docker.com | sh"
-    exit 1
-fi
-echo "✓ Docker is installed"
-echo ""
-
-# Create deployment directory
-echo "Creating deployment directory..."
-exec_cmd mkdir -p "$DEPLOY_PATH/logs"
-echo "✓ Directory created: $DEPLOY_PATH"
-echo ""
-
-# Copy files
-echo "Deploying files..."
-
-pct push "$VMID" "$TEMPLATES_DIR/discovery.py" "$DEPLOY_PATH/discovery.py"
-echo "✓ Copied: discovery.py"
-
-pct push "$VMID" "$TEMPLATES_DIR/monitor.py" "$DEPLOY_PATH/monitor.py"
-echo "✓ Copied: monitor.py"
-
-pct push "$VMID" "$TEMPLATES_DIR/startup.sh" "$DEPLOY_PATH/startup.sh"
-echo "✓ Copied: startup.sh"
-
-# Copy VERSION file
-if [ -f "/usr/local/share/sentrylab/VERSION" ]; then
-    pct push "$VMID" "/usr/local/share/sentrylab/VERSION" "$DEPLOY_PATH/VERSION"
-    echo "✓ Copied: VERSION"
+# ==============================================================================
+# DEBUG MODE: Skip Docker deployment and only simulate MQTT publication
+# ==============================================================================
+if [ "${DEBUG:-false}" = "true" ]; then
+    box_begin "DEBUG MODE - Simulation Only"
+    box_line ""
+    box_line "Docker deployment and Python scripts are DISABLED"
+    box_line "Only simulating MQTT configuration publication"
+    box_line ""
+    box_end
 else
-    echo "⚠ VERSION file not found, creating default"
-    exec_cmd bash -c "echo 'unknown' > $DEPLOY_PATH/VERSION"
-fi
+    # ==============================================================================
+    # NORMAL MODE: Deploy Docker container and scripts
+    # ==============================================================================
+    
+    # Check if Docker is installed
+    echo "Checking Docker installation..."
+    if ! exec_cmd which docker &>/dev/null; then
+        echo "ERROR: Docker is not installed on $VM_TYPE $VMID"
+        echo ""
+        echo "To install Docker, enter the CT and run:"
+        echo "  pct enter $VMID"
+        echo "  curl -fsSL https://get.docker.com | sh"
+        exit 1
+    fi
+    echo "✓ Docker is installed"
+    echo ""
 
-# Create compose.yml with substituted DEPLOY_PATH
-sed "s|DEPLOY_PATH|$DEPLOY_PATH|g" "$TEMPLATES_DIR/compose.yml" > /tmp/compose.yml.tmp
-pct push "$VMID" /tmp/compose.yml.tmp "$DEPLOY_PATH/compose.yml"
-rm /tmp/compose.yml.tmp
-echo "✓ Copied: compose.yml"
+    # Create deployment directory
+    echo "Creating deployment directory..."
+    exec_cmd mkdir -p "$DEPLOY_PATH/logs"
+    echo "✓ Directory created: $DEPLOY_PATH"
+    echo ""
 
-echo ""
+    # Copy files
+    echo "Deploying files..."
 
-# Generate .env file from sentrylab.conf
-echo "Generating .env configuration..."
+    pct push "$VMID" "$TEMPLATES_DIR/discovery.py" "$DEPLOY_PATH/discovery.py"
+    echo "✓ Copied: discovery.py"
 
-# Create .env content
-ENV_CONTENT="# SentryLab-Docker Configuration
+    pct push "$VMID" "$TEMPLATES_DIR/monitor.py" "$DEPLOY_PATH/monitor.py"
+    echo "✓ Copied: monitor.py"
+
+    pct push "$VMID" "$TEMPLATES_DIR/startup.sh" "$DEPLOY_PATH/startup.sh"
+    echo "✓ Copied: startup.sh"
+
+    # Copy VERSION file
+    if [ -f "/usr/local/share/sentrylab/VERSION" ]; then
+        pct push "$VMID" "/usr/local/share/sentrylab/VERSION" "$DEPLOY_PATH/VERSION"
+        echo "✓ Copied: VERSION"
+    else
+        echo "⚠ VERSION file not found, creating default"
+        exec_cmd bash -c "echo 'unknown' > $DEPLOY_PATH/VERSION"
+    fi
+
+    # Create compose.yml with substituted DEPLOY_PATH
+    sed "s|DEPLOY_PATH|$DEPLOY_PATH|g" "$TEMPLATES_DIR/compose.yml" > /tmp/compose.yml.tmp
+    pct push "$VMID" /tmp/compose.yml.tmp "$DEPLOY_PATH/compose.yml"
+    rm /tmp/compose.yml.tmp
+    echo "✓ Copied: compose.yml"
+
+    echo ""
+
+    # Generate .env file from sentrylab.conf
+    echo "Generating .env configuration..."
+
+    # Create .env content
+    ENV_CONTENT="# SentryLab-Docker Configuration
 # Auto-generated from /usr/local/etc/sentrylab.conf
 # Date: $(date)
 
@@ -237,48 +255,48 @@ RUN_DISCOVERY_ON_STARTUP=$RUN_DISCOVERY
 DEBUG=$DEBUG
 "
 
-# Write .env file to CT
-exec_cmd bash -c "cat > $DEPLOY_PATH/.env" << EOF
+    # Write .env file to CT
+    exec_cmd bash -c "cat > $DEPLOY_PATH/.env" << EOF
 $ENV_CONTENT
 EOF
 
-echo "✓ Configuration created: .env"
-echo ""
+    echo "✓ Configuration created: .env"
+    echo ""
 
-# Make scripts executable
-exec_cmd chmod +x "$DEPLOY_PATH/discovery.py"
-exec_cmd chmod +x "$DEPLOY_PATH/monitor.py"
-exec_cmd chmod +x "$DEPLOY_PATH/startup.sh"
+    # Make scripts executable
+    exec_cmd chmod +x "$DEPLOY_PATH/discovery.py"
+    exec_cmd chmod +x "$DEPLOY_PATH/monitor.py"
+    exec_cmd chmod +x "$DEPLOY_PATH/startup.sh"
 
-# Start the service
-echo "Starting Docker monitoring service..."
-exec_cmd bash -c "cd $DEPLOY_PATH && docker compose up -d"
-echo "✓ Service started"
-echo ""
+    # Start the service
+    echo "Starting Docker monitoring service..."
+    exec_cmd bash -c "cd $DEPLOY_PATH && docker compose up -d"
+    echo "✓ Service started"
+    echo ""
 
-echo "================================================"
-echo "Deployment Complete!"
-echo "================================================"
-echo ""
-echo "VM/CT:      $VM_NAME ($VMID)"
-echo "Device ID:  $DEVICE_ID"
-echo "Path:       $DEPLOY_PATH"
-echo ""
-echo "Useful commands:"
-echo ""
-echo "  View logs:"
-echo "    pct exec $VMID -- docker logs sentrylab -f"
-echo ""
-echo "  Restart service:"
-echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose restart'"
-echo ""
-echo "  Re-run discovery:"
-echo "    pct exec $VMID -- docker exec sentrylab python /app/discovery.py"
-echo ""
-echo "  Stop service:"
-echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose down'"
-echo ""
-echo "================================================"
+    echo "================================================"
+    echo "Deployment Complete!"
+    echo "================================================"
+    echo ""
+    echo "VM/CT:      $VM_NAME ($VMID)"
+    echo "Device ID:  $DEVICE_ID"
+    echo "Path:       $DEPLOY_PATH"
+    echo ""
+    echo "Useful commands:"
+    echo ""
+    echo "  View logs:"
+    echo "    pct exec $VMID -- docker logs sentrylab -f"
+    echo ""
+    echo "  Restart service:"
+    echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose restart'"
+    echo ""
+    echo "  Re-run discovery:"
+    echo "    pct exec $VMID -- docker exec sentrylab python /app/discovery.py"
+    echo ""
+    echo "  Stop service:"
+    echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose down'"
+    echo ""
+fi
 
 # ============================================================================
 # Publish VM/CT-level discovery and data topics to MQTT
