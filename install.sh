@@ -75,13 +75,11 @@ mkdir -p "$DEST_DIR"
 mkdir -p "$(dirname $CONF_FILE)"
 mkdir -p "$TPL_DIR"
 box_simple_line "✓ Directories created"
-box_simple_line ""
 
 box_simple_line "Copying scripts..."
 cp scripts/*.sh "$DEST_DIR/"
 chmod +x "$DEST_DIR"/*.sh
 box_simple_line "✓ Copied: setup-vmct.sh, remove-vmct.sh, utils.sh"
-box_simple_line ""
 
 box_simple_line "Copying templates..."
 cp templates/discovery.py "$TPL_DIR/"
@@ -95,7 +93,6 @@ box_simple_line ""
 box_simple_line "Copying VERSION file..."
 cp VERSION "$SHARE_DIR/VERSION"
 box_simple_line "✓ Copied: VERSION"
-box_simple_line ""
 
 box_simple_line "Creating configuration..."
 if [ -f "$CONF_FILE" ]; then

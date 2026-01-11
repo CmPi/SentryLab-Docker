@@ -77,33 +77,29 @@ RUN_DISCOVERY="${DOCKER_RUN_DISCOVERY_ON_STARTUP:-true}"
 
 # Check VMID parameter
 if [ -z "$1" ]; then
-    echo "Usage: $0 <VMID>"
-    echo ""
-    echo "Deploy SentryLab-Docker monitoring to a Proxmox VM/CT"
-    echo ""
-    echo "Example: $0 100"
-    echo ""
+    box_line "Usage: $0 <VMID>"
+    box_line ""
+    box_line "Deploy SentryLab-Docker monitoring to a Proxmox VM/CT"
+    box_line ""
+    box_line "Example: $0 100"
+    box_line ""
+    box_end
     exit 1
 fi
 
 VMID="$1"
 
-echo "================================================"
-echo "SentryLab-Docker VM/CT Setup"
-echo "Version 1.0.0"
-echo "================================================"
-echo ""
-
 # Check if VM/CT exists
 if ! pct status "$VMID" &>/dev/null && ! qm status "$VMID" &>/dev/null; then
     PROXMOX_NODE=$(hostname -s)
-    echo "ERROR: VM/CT $VMID not found on node $PROXMOX_NODE"
-    echo ""
-    echo "Available containers:"
+    box_line "ERROR: VM/CT $VMID not found on node $PROXMOX_NODE"
+    box_line ""
+    box_line "Available containers:"
     pct list 2>/dev/null || echo "  (none)"
-    echo ""
-    echo "Available VMs:"
+    box_line ""
+    box_line "Available VMs:"
     qm list 2>/dev/null || echo "  (none)"
+    box_end
     exit 1
 fi
 
