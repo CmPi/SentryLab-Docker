@@ -7,10 +7,32 @@
 # @version 0.1.11
 #
 
+# DONE: 
+#  * Use utils.sh (to load config, print messages, etc.)
+#  * Publish discovery messages after setup and related to the while VMCT (*.py will deal with docker inside)
+#   discovery topics: 
+#     - homeassistant/sl_docker_<proxmox_hostname>_<vmct id>_deployed/config
+#     - homeassistant/sl_docker_<proxmox_hostname>_<vmct id>_deployed_time/config
+#     - homeassistant/sl_docker_<proxmox_hostname>_<vmct id>_last_discovery_time/config
+#     - homeassistant/sl_docker_<proxmox_hostname>_<vmct id>_last_monitor_time/config
+#  * Publish data topics after setup and related to the while VMCT (*.py will deal with docker inside)
+#   data topics:
+#     - sl_docker/<proxmox_hostname>/<vmct id>/deployed - Value: true (retained)
+#     - sl_docker/<proxmox_hostname>/<vmct id>/deployed_time - Value: true (retained)
+
+# TODO
+
+#  when launched, discovery.py shall publish data (NOW) under:
+#     - sl_docker/<proxmox_hostname>/<vmct id>/last_discovery_time (retained)
+#  when launched, monitor.py shall publish data (NOW) under:
+#     - sl_docker/<proxmox_hostname>/<vmct id>/last_monitor_time
+
+
 set -e
 
 CONFIG_FILE="/usr/local/etc/sentrylab.conf"
 TEMPLATES_DIR="/usr/local/share/sentrylab/templates"
+UTILS_FILE="/usr/local/bin/sentrylab/utils.sh"
 
 # Check if config exists
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -22,9 +44,26 @@ fi
 # Source configuration
 source "$CONFIG_FILE"
 
+# Source utils.sh for MQTT publishing and logging functions
+if [ -f "$UTILS_FILE" ]; then
+    # Set INTERACTIVE mode for setup script
+    INTERACTIVE=true
+    source "$UTILS_FILE"
+else
+    echo "WARNING: utils.sh not found, MQTT publishing will be skipped"
+    echo "         Expected at: $UTILS_FILE"
+    # Define stub functions if utils.sh not available
+    mqtt_publish_retain() { return 0; }
+fi
+
+box_title "SentryLab-Docker - VM/CT Setup"
+
+box_begin "Prerequisites Checks"
+
 # Check required variables
 if [ -z "$BROKER" ]; then
-    echo "ERROR: BROKER not set in $CONFIG_FILE"
+    box_line "ERROR: BROKER not set in $CONFIG_FILE"
+    box_end
     exit 1
 fi
 
@@ -240,3 +279,99 @@ echo "  Stop service:"
 echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose down'"
 echo ""
 echo "================================================"
+
+# ============================================================================
+# Publish VM/CT-level discovery and data topics to MQTT
+# ============================================================================
+
+if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    echo ""
+    echo "Publishing Home Assistant discovery topics..."
+    
+    # Get Proxmox hostname for topic hierarchy
+    PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
+    BASE_TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}"
+    HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
+    
+    # Create device info for Home Assistant
+    DEVICE_JSON=$(jq -n \
+        --arg id "docker_${PROXMOX_HOST}_${VMID}" \
+        --arg name "Docker ${VM_NAME}" \
+        --arg model "SentryLab-Docker" \
+        --arg mfr "SentryLab" \
+        '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
+    
+    # 1. Deployed status binary sensor
+    DEPLOYED_CONFIG=$(jq -n \
+        --argjson dev "$DEVICE_JSON" \
+        --arg topic "${BASE_TOPIC}/deployed" \
+        '{
+            name: "Deployed",
+            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_deployed",
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            payload_on: "true",
+            payload_off: "false",
+            device_class: "connectivity",
+            device: $dev
+        }')
+    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/binary_sensor/sl_docker_${PROXMOX_HOST}_${VMID}_deployed/config" \
+        "$(echo "$DEPLOYED_CONFIG" | jq -c .)"
+    
+    # 2. Deployed time sensor
+    DEPLOYED_TIME_CONFIG=$(jq -n \
+        --argjson dev "$DEVICE_JSON" \
+        --arg topic "${BASE_TOPIC}/deployed_time" \
+        '{
+            name: "Deployed Time",
+            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_deployed_time",
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            device_class: "timestamp",
+            device: $dev
+        }')
+    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_docker_${PROXMOX_HOST}_${VMID}_deployed_time/config" \
+        "$(echo "$DEPLOYED_TIME_CONFIG" | jq -c .)"
+    
+    # 3. Last discovery time sensor
+    DISCOVERY_TIME_CONFIG=$(jq -n \
+        --argjson dev "$DEVICE_JSON" \
+        --arg topic "${BASE_TOPIC}/last_discovery_time" \
+        '{
+            name: "Last Discovery Time",
+            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_last_discovery_time",
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            device_class: "timestamp",
+            device: $dev
+        }')
+    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_docker_${PROXMOX_HOST}_${VMID}_last_discovery_time/config" \
+        "$(echo "$DISCOVERY_TIME_CONFIG" | jq -c .)"
+    
+    # 4. Last monitor time sensor
+    MONITOR_TIME_CONFIG=$(jq -n \
+        --argjson dev "$DEVICE_JSON" \
+        --arg topic "${BASE_TOPIC}/last_monitor_time" \
+        '{
+            name: "Last Monitor Time",
+            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_last_monitor_time",
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            device_class: "timestamp",
+            device: $dev
+        }')
+    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_docker_${PROXMOX_HOST}_${VMID}_last_monitor_time/config" \
+        "$(echo "$MONITOR_TIME_CONFIG" | jq -c .)"
+    
+    # Publish initial data topics
+    echo "Publishing data topics..."
+    DEPLOYED_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    mqtt_publish_retain "${BASE_TOPIC}/deployed" "true"
+    mqtt_publish_retain "${BASE_TOPIC}/deployed_time" "$DEPLOYED_TIMESTAMP"
+    
+    echo "✓ Discovery and data topics published"
+else
+    echo ""
+    echo "⚠ MQTT publishing skipped (utils.sh or BROKER not available)"
+fi

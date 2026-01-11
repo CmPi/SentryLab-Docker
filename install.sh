@@ -50,18 +50,20 @@ box_simple_line ""
 
 # Check if running on Proxmox
 if [ ! -f /etc/pve/.version ]; then
-    echo "⚠ Warning: This doesn't appear to be a Proxmox host"
+    box_simple_line "⚠ Warning: This doesn't appear to be a Proxmox host"
     read -p "Continue anyway? (y/N): " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "└──────────────────────────────────────────────────────────────────────────────┘"
         exit 1
     fi
 fi
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 
-   exit 1
+    box_simple_line "This script must be run as root"
+    echo "└──────────────────────────────────────────────────────────────────────────────┘"    
+    exit 1
 fi
 
 CONF_FILE="/usr/local/etc/sentrylab.conf"
@@ -76,13 +78,15 @@ mkdir -p "$TPL_DIR"
 box_simple_line "✓ Directories created"
 box_simple_line ""
 
-echo "Copying scripts..."
+box_simple_line "Copying scripts..."
 cp scripts/setup-vmct.sh "$DEST_DIR/"
+cp scripts/utils.sh "$DEST_DIR/"
 chmod +x "$DEST_DIR/setup-vmct.sh"
-echo "✓ Copied: setup-vmct.sh"
-echo ""
+box_simple_line "✓ Copied: setup-vmct.sh"
+box_simple_line "✓ Copied: utils.sh"
+box_simple_line ""
 
-echo "Copying templates..."
+box_simple_line "Copying templates..."
 cp templates/discovery.py "$TPL_DIR/"
 cp templates/monitor.py "$TPL_DIR/"
 cp templates/startup.sh "$TPL_DIR/"
@@ -90,16 +94,16 @@ cp templates/compose.yml "$TPL_DIR/"
 chmod +x "$TPL_DIR/discovery.py"
 chmod +x "$TPL_DIR/monitor.py"
 chmod +x "$TPL_DIR/startup.sh"
-echo "✓ Copied: discovery.py"
-echo "✓ Copied: monitor.py"
-echo "✓ Copied: startup.sh"
-echo "✓ Copied: compose.yml"
-echo ""
+box_simple_line "✓ Copied: discovery.py"
+box_simple_line "✓ Copied: monitor.py"
+box_simple_line "✓ Copied: startup.sh"
+box_simple_line "✓ Copied: compose.yml"
+box_simple_line ""
 
-echo "Copying VERSION file..."
+box_simple_line "Copying VERSION file..."
 cp VERSION "$SHARE_DIR/VERSION"
-echo "✓ Copied: VERSION"
-echo ""
+box_simple_line "✓ Copied: VERSION"
+box_simple_line ""
 
 echo "Creating configuration..."
 if [ -f "$CONF_FILE" ]; then
