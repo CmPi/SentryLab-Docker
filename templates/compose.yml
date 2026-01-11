@@ -1,0 +1,42 @@
+#
+# @file compose.yml
+# @author CmPi <github.com/CmPi>
+# @brief Docker Compose configuration for SentryLab-Docker
+# @date 2026-01-11
+# @version 0.1.11
+#
+
+version: "3.8"
+
+services:
+  sentrylab:
+    image: python:3.12-alpine
+    container_name: sentrylab
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - DEPLOY_PATH/discovery.py:/app/discovery.py:ro
+      - DEPLOY_PATH/monitoring.py:/app/monitoring.py:ro
+      - DEPLOY_PATH/startup.sh:/app/startup.sh:ro
+      - DEPLOY_PATH/VERSION:/app/VERSION:ro
+      - DEPLOY_PATH/logs:/logs
+    env_file:
+      - DEPLOY_PATH/.env
+    entrypoint: ["/bin/sh", "/app/startup.sh"]
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "monitoring.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+    networks:
+      - sentrylab
+
+networks:
+  sentrylab:
+    driver: bridge
