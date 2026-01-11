@@ -203,18 +203,19 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
     DEVICE_JSON=$(jq -n \
         --arg id "sentrylab_${PROXMOX_HOST}_${VMID}" \
-        --arg name "VM/CT ${VMID} on ${PROXMOX_NODE}" \
-        --arg model "SentryLab-Docker" \
+        --arg name "${VM_NAME} on ${PROXMOX_NODE}" \
+        --arg model "${VM_TYPE}" \
         --arg mfr "SentryLab" \
         '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
     
     # VM/CT status discovery
     VMCT_STATUS_CONFIG=$(jq -n \
         --argjson dev "$DEVICE_JSON" \
-        --arg topic "sl_docker/${PROXMOX_HOST}/${VMID}/status" \
+        --arg topic "sentrylab/${PROXMOX_HOST}/${VMID}/status" \
         '{
-            name: "VM/CT Status",
+            name: "${VM_TYPE} ${VM_NAME} Status",
             unique_id: "'${PROXMOX_HOST}'_'${VMID}'_status",
+            object_id: "'${PROXMOX_HOST}'_'${VMID}'_status",
             state_topic: $topic,
             value_template: "{{ value_json }}",
             device: $dev,
@@ -223,7 +224,6 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_${PROXMOX_HOST}_${VMID}_status/config" \
         "$(echo "$VMCT_STATUS_CONFIG" | jq -c .)"
 fi
-
 
 # Get Proxmox hostname for consistent topic hierarchy
 PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
@@ -246,8 +246,17 @@ else
     STATUS=$(qm status "$VMID" | awk '{print $2}')
 fi
 
+# Publish VM/CT status data (running or stopped)
+if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    VMCT_STATUS_VALUE="running"
+    if [ "$STATUS" != "running" ]; then
+        VMCT_STATUS_VALUE="stopped"
+    fi
+    mqtt_publish_retain "sentrylab/${PROXMOX_HOST}/${VMID}/status" "$VMCT_STATUS_VALUE"
+fi
+
 if [ "$STATUS" != "running" ]; then
-    echo "WARNING: $VM_TYPE $VMID is not running (status: $STATUS)"
+    box_line "WARNING: $VM_TYPE $VMID is not running (status: $STATUS)"
     read -p "Continue anyway? (y/N): " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -255,14 +264,7 @@ if [ "$STATUS" != "running" ]; then
     fi
 fi
 
-# Publish VM/CT status data (running or stopped)
-if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
-    VMCT_STATUS_VALUE="running"
-    if [ "$STATUS" != "running" ]; then
-        VMCT_STATUS_VALUE="stopped"
-    fi
-    mqtt_publish_retain "sl_docker/${PROXMOX_HOST}/${VMID}/status" "$VMCT_STATUS_VALUE"
-fi
+
 
 # Function to execute commands in CT
 exec_cmd() {
@@ -307,7 +309,7 @@ else
     if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
         HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
         DEVICE_JSON=$(jq -n \
-            --arg id "docker_${PROXMOX_HOST}_${VMID}" \
+            --arg id "sl_${PROXMOX_HOST}_${VMID}" \
             --arg name "SentryLab Docker VM/CT" \
             --arg model "SentryLab-Docker" \
             --arg mfr "SentryLab" \
