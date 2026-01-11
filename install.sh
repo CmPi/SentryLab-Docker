@@ -9,6 +9,20 @@
 # @usage sudo ./install.sh
 #
 
+#
+# SPECIFICATION:
+# 1) Check prerequisites:
+#    11) Check if running on Proxmox
+#    12) Check if running as root
+# 2) Create necessary directories
+# 3) Copy Files:
+#    31) Copy scripts to /usr/local/bin/sentrylab
+#    32) Copy templates to /usr/local/share/sentrylab/templates
+#    33) Copy VERSION file to /usr/local/share/sentrylab/SL_DOCKER_VERSION
+#    34) Copy, if doesn't exist, config to /usr/local/etc/sentrylab.conf
+# 4) Display next steps to the user
+#
+
 set -euo pipefail
 
 BOX_WIDTH=80
@@ -42,12 +56,18 @@ box_simple_line() {
 
 clear
 
-echo "┌─ SentryLab-Docker Installer ─────────────────────────────────────────────────┐"
-box_simple_line ""
+# Read repository VERSION (used in installer header)
+S_VERSION="unknown"
+if [ -f VERSION ]; then
+    S_VERSION=$(cat VERSION)
+fi
 
-# Check prerequisites
+echo "┌─ SentryLab-Docker Installer  ────────────────────────────────────────────────┐"
+box_simple_line "Tool version: $S_VERSION"
 
-# Check if running on Proxmox
+# 1) Check prerequisites
+
+# 11) Check if running on Proxmox
 if [ ! -f /etc/pve/.version ]; then
     box_simple_line "⚠ Warning: This doesn't appear to be a Proxmox host"
     read -p "Continue anyway? (y/N): " -n 1 -r
@@ -58,12 +78,14 @@ if [ ! -f /etc/pve/.version ]; then
     fi
 fi
 
-# Check if running as root
+# 12) Check if running as root
 if [[ $EUID -ne 0 ]]; then
     box_simple_line "This script must be run as root"
     echo "└──────────────────────────────────────────────────────────────────────────────┘"    
     exit 1
 fi
+
+# 2) Create necessary directories
 
 CONF_FILE="/usr/local/etc/sentrylab.conf"
 DEST_DIR="/usr/local/bin/sentrylab"
@@ -76,10 +98,14 @@ mkdir -p "$(dirname $CONF_FILE)"
 mkdir -p "$TPL_DIR"
 box_simple_line "✓ Directories created"
 
+# 31) Copy scripts to /usr/local/bin/sentrylab
+
 box_simple_line "Copying scripts..."
 cp scripts/*.sh "$DEST_DIR/"
 chmod +x "$DEST_DIR"/*.sh
 box_simple_line "✓ Copied: setup-vmct.sh, remove-vmct.sh, utils.sh"
+
+# 32) Copy templates
 
 box_simple_line "Copying templates..."
 cp templates/discovery.py "$TPL_DIR/"
@@ -88,13 +114,15 @@ cp templates/startup.sh "$TPL_DIR/"
 cp templates/compose.yml "$TPL_DIR/"
 chmod +x "$TPL_DIR"/*.py "$TPL_DIR"/*.sh
 box_simple_line "✓ Copied: discovery.py, monitor.py, startup.sh, compose.yml"
-box_simple_line ""
+
+# 33) Copy VERSION file
 
 box_simple_line "Copying VERSION file..."
-cp VERSION "$SHARE_DIR/VERSION"
-box_simple_line "✓ Copied: VERSION"
+cp VERSION "$SHARE_DIR/SL_DOCKER_VERSION"
+box_simple_line "✓ Copied: SL_DOCKER_VERSION"
+box_simple_line ""
 
-box_simple_line "Creating configuration..."
+# 34) Copy, if doesn't exist, config to /usr/local/etc/sentrylab.conf
 if [ -f "$CONF_FILE" ]; then
     box_simple_line "⚠ Configuration file already exists: $CONF_FILE"
     box_simple_line "  Keeping existing configuration"
@@ -114,9 +142,8 @@ fi
 box_simple_line ""
 box_simple_line "Installation Complete!"
 echo "└──────────────────────────────────────────────────────────────────────────────┘"
-echo ""
 
-# Display next steps
+# 4) Display next steps
 
 echo "┌─ Next steps ─────────────────────────────────────────────────────────────────┐"
 box_simple_line ""

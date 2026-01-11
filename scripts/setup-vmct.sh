@@ -7,8 +7,16 @@
 # @version 0.1.11
 #
 
+#
+# SPECIFICATION:
+# 1) Check prerequisites:
+#    11) Check if config file exists and source it
+#    12) Chechk if utils.sh exists and source it
+#    13) Check if running on Proxmox
+#    14) Check if running as root
+#    15) Check required variables (BROKER, PORT, USER, PASS...)
+
 # DONE: 
-#  * Use utils.sh (to load config, print messages, etc.)
 #  * Publish discovery messages after setup and related to the while VMCT (*.py will deal with docker inside)
 #   discovery topics: 
 #     - homeassistant/sl_docker_<proxmox_hostname>_<vmct id>_deployed/config
@@ -32,21 +40,23 @@ set -e
 
 PROXMOX_NODE=$(hostname -s)
 
+# 1) Prerequisites Checks
+
 CONFIG_FILE="/usr/local/etc/sentrylab.conf"
 TEMPLATES_DIR="/usr/local/share/sentrylab/templates"
 UTILS_FILE="/usr/local/bin/sentrylab/utils.sh"
 
-# Check if config exists
+# 11) Check if config exists
+
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "ERROR: Config file not found: $CONFIG_FILE"
     echo "Run install.sh first!"
     exit 1
 fi
-
-# Source configuration
 source "$CONFIG_FILE"
 
-# Source utils.sh for MQTT publishing and logging functions
+# 12) Source utils.sh for MQTT publishing and logging functions
+
 if [ -f "$UTILS_FILE" ]; then
     # Set INTERACTIVE mode for setup script
     INTERACTIVE=true
@@ -58,15 +68,76 @@ else
     mqtt_publish_retain() { return 0; }
 fi
 
-box_title "SentryLab-Docker - VM/CT Setup"
+
+# Read repository VERSION (used in installer header)
+
+S_VERSION="unknown"
+if [ -f VERSION ]; then
+    S_VERSION=$(cat VERSION)
+fi
+
+box_title "SentryLab-Docker v${S_VERSION} - VM/CT Setup"
 
 box_begin "Prerequisites Checks"
 
-# Check required variables
-if [ -z "$BROKER" ]; then
-    box_line "ERROR: BROKER not set in $CONFIG_FILE"
+# 13) Check if running on Proxmox (same behavior as install.sh)
+if [ ! -f /etc/pve/.version ]; then
+    box_line "⚠ Warning: This doesn't appear to be a Proxmox host"
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        box_end
+        exit 1
+    fi
+fi
+
+# 14) Check if running as root
+if [[ $EUID -ne 0 ]]; then
+    box_line "ERROR: This script must be run as root"
     box_end
     exit 1
+fi
+
+# 15) Check required variables (BROKER, PORT, USER, PASS, MQTT_QOS)
+# If DEBUG is true we only warn; otherwise these are required.
+if [[ "${DEBUG:-false}" == "true" ]]; then
+    box_line "DEBUG mode: MQTT settings not strictly required (no publishing will occur)"
+else
+    local_bad=false
+    if [ -z "${BROKER:-}" ]; then
+        box_line "ERROR: BROKER not set in $CONFIG_FILE"
+        local_bad=true
+    fi
+    if [ -z "${PORT:-}" ]; then
+        box_line "ERROR: PORT not set in $CONFIG_FILE"
+        local_bad=true
+    else
+        if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
+            box_line "ERROR: PORT must be a number (found: $PORT)"
+            local_bad=true
+        fi
+    fi
+    if [ -z "${USER:-}" ]; then
+        box_line "ERROR: USER not set in $CONFIG_FILE"
+        local_bad=true
+    fi
+    if [ -z "${PASS:-}" ]; then
+        box_line "ERROR: PASS not set in $CONFIG_FILE"
+        local_bad=true
+    fi
+    if [ -z "${MQTT_QOS:-}" ]; then
+        box_line "ERROR: MQTT_QOS not set in $CONFIG_FILE"
+        local_bad=true
+    else
+        if ! [[ "$MQTT_QOS" =~ ^[0-2]$ ]]; then
+            box_line "ERROR: MQTT_QOS must be 0, 1 or 2 (found: $MQTT_QOS)"
+            local_bad=true
+        fi
+    fi
+    if [ "$local_bad" = true ]; then
+        box_end
+        exit 1
+    fi
 fi
 
 # Use DOCKER_* variables from config, with defaults
@@ -110,7 +181,7 @@ PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
     DEVICE_JSON=$(jq -n \
-        --arg id "docker_${PROXMOX_HOST}_${VMID}" \
+        --arg id "sentrylab_${PROXMOX_HOST}_${VMID}" \
         --arg name "SentryLab Docker VM/CT" \
         --arg model "SentryLab-Docker" \
         --arg mfr "SentryLab" \
@@ -274,9 +345,9 @@ else
     pct push "$VMID" "$TEMPLATES_DIR/startup.sh" "$DEPLOY_PATH/startup.sh"
     echo "✓ Copied: startup.sh"
 
-    # Copy VERSION file
-    if [ -f "/usr/local/share/sentrylab/VERSION" ]; then
-        pct push "$VMID" "/usr/local/share/sentrylab/VERSION" "$DEPLOY_PATH/VERSION"
+    # Copy VERSION file (renamed from SL_DOCKER_VERSION to VERSION inside container)
+    if [ -f "/usr/local/share/sentrylab/SL_DOCKER_VERSION" ]; then
+        pct push "$VMID" "/usr/local/share/sentrylab/SL_DOCKER_VERSION" "$DEPLOY_PATH/VERSION"
         echo "✓ Copied: VERSION"
     else
         echo "⚠ VERSION file not found, creating default"
