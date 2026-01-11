@@ -533,6 +533,11 @@ translate() {
 BOX_WIDTH=80
 
 # Major Title (Double border, centered)
+# Display a title in a box with a double border and centered text
+# Usage: box_title "Title" [width]
+# @param1 title: The title to display in the box
+# @param2 width: The width of the box in characters (optional, default: 80)
+# Visible only in DEBUG mode
 box_title() {
     [[ "${DEBUG:-false}" != "true" && "${INTERACTIVE:-false}" != "true" ]] && return 0
     local title="$1"
@@ -564,6 +569,10 @@ strip_ansi() {
 
 # Begin a box section with a title (Visible only in DEBUG mode)
 # Usage: box_begin "Title" [width]
+# @param1 title: The title to insert as part of the top border
+# @param2 width: The width of the box in characters (default: 80)
+# Visible only in DEBUG mode
+# a box_end call - with or without one or many calls to box_line - shall follow to close the box
 box_begin() {
     [[ "${DEBUG:-false}" != "true" && "${INTERACTIVE:-false}" != "true" ]] && return 0
     local raw_title="${1:-}"
@@ -751,6 +760,7 @@ pad_to_width() {
 # Print a label:value pair. The label is kept on the first line and the value is colored.
 # The value may wrap across multiple lines; wrapped lines start aligned at the value column
 # Usage: box_value "Label" "Some potentially long value" [width]
+# a box_begin call shall precede this to open the box
 box_value() {
     [[ "${DEBUG:-false}" != "true" && "${INTERACTIVE:-false}" != "true" ]] && return 0
 
@@ -820,6 +830,7 @@ box_value() {
 # Usage: box_line "Some text" [color_name] [width]
 # Color names: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
 # If no color specified, auto-detect based on keywords (ERROR, INFO, SKIP, etc.)
+# a box_begin call shall precede this to open the box
 box_line() {
     [[ "${DEBUG:-false}" != "true" && "${INTERACTIVE:-false}" != "true" ]] && return 0
     local input="${1-}"
@@ -879,6 +890,7 @@ box_line() {
 
 # End a box section
 # Usage: box_end [wiydth]
+# a box_begin call shall precede this to open the box
 box_end() {
     [[ "${DEBUG:-false}" != "true" && "${INTERACTIVE:-false}" != "true" ]] && return 0
     local width="${1:-$BOX_WIDTH}"

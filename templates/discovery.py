@@ -39,6 +39,8 @@ PASS = os.getenv("PASS", "")
 HA_BASE_TOPIC = os.getenv("HA_BASE_TOPIC", "homeassistant")
 DEVICE_NAME = os.getenv("DEVICE_NAME", "Docker Host")
 DEVICE_ID = os.getenv("DEVICE_ID", "docker_host")
+PROXMOX_HOST = os.getenv("PROXMOX_HOST", "proxmox")
+PROXMOX_VMID = os.getenv("PROXMOX_VMID", "0")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
@@ -100,6 +102,9 @@ def publish_container_discovery(mqtt_client, container):
     safe_name = container_name.replace("-", "_").replace(".", "_")
     device_info = create_device_info()
     
+    # Topic prefix following hierarchy: sl_docker_<proxmox_host>_<vmid>_<container_name>
+    topic_prefix = f"sl_docker_{PROXMOX_HOST}_{PROXMOX_VMID}_{safe_name}"
+    
     # Get container image info
     try:
         image_full = container.image.tags[0] if container.image.tags else container.attrs["Config"]["Image"]
@@ -116,7 +121,7 @@ def publish_container_discovery(mqtt_client, container):
     # Binary Sensor - Running Status
     binary_sensor_config = {
         "name": f"{container_name} Status",
-        "unique_id": f"docker_{safe_name}_status",
+        "unique_id": f"{topic_prefix}_status",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.running }}",
         "payload_on": "true",
@@ -126,60 +131,60 @@ def publish_container_discovery(mqtt_client, container):
         "icon": "mdi:docker"
     }
     
-    topic = f"{HA_BASE_TOPIC}/binary_sensor/docker_{safe_name}/status/config"
+    topic = f"{HA_BASE_TOPIC}/binary_sensor/{topic_prefix}_status/config"
     mqtt_client.publish(topic, json.dumps(binary_sensor_config), retain=True)
     logger.info(f"Published discovery for {container_name} status")
     
     # Sensor - State
     state_sensor_config = {
         "name": f"{container_name} State",
-        "unique_id": f"docker_{safe_name}_state",
+        "unique_id": f"{topic_prefix}_state",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.state }}",
         "device": device_info,
         "icon": "mdi:information-outline"
     }
     
-    topic = f"{HA_BASE_TOPIC}/sensor/docker_{safe_name}/state/config"
+    topic = f"{HA_BASE_TOPIC}/sensor/{topic_prefix}_state/config"
     mqtt_client.publish(topic, json.dumps(state_sensor_config), retain=True)
     
     # Sensor - Uptime
     uptime_sensor_config = {
         "name": f"{container_name} Uptime",
-        "unique_id": f"docker_{safe_name}_uptime",
+        "unique_id": f"{topic_prefix}_uptime",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.uptime }}",
         "device": device_info,
         "icon": "mdi:clock-outline"
     }
     
-    topic = f"{HA_BASE_TOPIC}/sensor/docker_{safe_name}/uptime/config"
+    topic = f"{HA_BASE_TOPIC}/sensor/{topic_prefix}_uptime/config"
     mqtt_client.publish(topic, json.dumps(uptime_sensor_config), retain=True)
     
     # Sensor - Health
     health_sensor_config = {
         "name": f"{container_name} Health",
-        "unique_id": f"docker_{safe_name}_health",
+        "unique_id": f"{topic_prefix}_health",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.health | default('N/A') }}",
         "device": device_info,
         "icon": "mdi:heart-pulse"
     }
     
-    topic = f"{HA_BASE_TOPIC}/sensor/docker_{safe_name}/health/config"
+    topic = f"{HA_BASE_TOPIC}/sensor/{topic_prefix}_health/config"
     mqtt_client.publish(topic, json.dumps(health_sensor_config), retain=True)
     
     # Sensor - Image
     image_sensor_config = {
         "name": f"{container_name} Image",
-        "unique_id": f"docker_{safe_name}_image",
+        "unique_id": f"{topic_prefix}_image",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.image }}",
         "device": device_info,
         "icon": "mdi:package-variant"
     }
     
-    topic = f"{HA_BASE_TOPIC}/sensor/docker_{safe_name}/image/config"
+    topic = f"{HA_BASE_TOPIC}/sensor/{topic_prefix}_image/config"
     mqtt_client.publish(topic, json.dumps(image_sensor_config), retain=True)
     
     # Sensor - Image Version (new!)

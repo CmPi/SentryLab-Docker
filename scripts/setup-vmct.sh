@@ -96,7 +96,7 @@ echo ""
 
 # Check if VM/CT exists
 if ! pct status "$VMID" &>/dev/null && ! qm status "$VMID" &>/dev/null; then
-    
+    PROXMOX_NODE=$(hostname -s)
     echo "ERROR: VM/CT $VMID not found on node $PROXMOX_NODE"
     echo ""
     echo "Available containers:"
@@ -105,6 +105,35 @@ if ! pct status "$VMID" &>/dev/null && ! qm status "$VMID" &>/dev/null; then
     echo "Available VMs:"
     qm list 2>/dev/null || echo "  (none)"
     exit 1
+fi
+
+# Get Proxmox hostname early for status publishing
+PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
+
+# Publish initial VM/CT status discovery and data (status: absent)
+if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
+    DEVICE_JSON=$(jq -n \
+        --arg id "docker_${PROXMOX_HOST}_${VMID}" \
+        --arg name "SentryLab Docker VM/CT" \
+        --arg model "SentryLab-Docker" \
+        --arg mfr "SentryLab" \
+        '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
+    
+    # VM/CT status discovery
+    VMCT_STATUS_CONFIG=$(jq -n \
+        --argjson dev "$DEVICE_JSON" \
+        --arg topic "sl_docker/${PROXMOX_HOST}/${VMID}/status" \
+        '{
+            name: "VM/CT Status",
+            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_status",
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            device: $dev,
+            icon: "mdi:server"
+        }')
+    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_${PROXMOX_HOST}_${VMID}_status/config" \
+        "$(echo "$VMCT_STATUS_CONFIG" | jq -c .)"
 fi
 
 # Determine if it's a CT or VM
@@ -123,9 +152,12 @@ if [ -z "$VM_NAME" ]; then
     VM_NAME="vm${VMID}"
 fi
 
-# Generate device identifiers
-DEVICE_NAME="${VM_NAME} (${VM_TYPE})"
-DEVICE_ID="docker_$(echo $VM_NAME | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_')"
+# Get Proxmox hostname for consistent topic hierarchy
+PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
+
+# Generate device identifiers matching topic hierarchy: sl_docker/<proxmox_node>/<vmid>
+DEVICE_NAME="Docker ${VM_NAME} (${PROXMOX_HOST})"
+DEVICE_ID="docker_${PROXMOX_HOST}_${VMID}"
 
 echo "VM/CT ID:    $VMID"
 echo "Type:        $VM_TYPE"
@@ -149,6 +181,15 @@ if [ "$STATUS" != "running" ]; then
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
+fi
+
+# Publish VM/CT status data (running or stopped)
+if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    VMCT_STATUS_VALUE="running"
+    if [ "$STATUS" != "running" ]; then
+        VMCT_STATUS_VALUE="stopped"
+    fi
+    mqtt_publish_retain "sl_docker/${PROXMOX_HOST}/${VMID}/status" "$VMCT_STATUS_VALUE"
 fi
 
 # Function to execute commands in CT
@@ -189,6 +230,35 @@ else
     fi
     echo "✓ Docker is installed"
     echo ""
+    
+    # Publish Docker status discovery and data (running)
+    if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+        HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
+        DEVICE_JSON=$(jq -n \
+            --arg id "docker_${PROXMOX_HOST}_${VMID}" \
+            --arg name "SentryLab Docker VM/CT" \
+            --arg model "SentryLab-Docker" \
+            --arg mfr "SentryLab" \
+            '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
+        
+        # Docker status discovery
+        DOCKER_STATUS_CONFIG=$(jq -n \
+            --argjson dev "$DEVICE_JSON" \
+            --arg topic "sl_docker/${PROXMOX_HOST}/${VMID}/docker_status" \
+            '{
+                name: "Docker Status",
+                unique_id: "'${PROXMOX_HOST}'_'${VMID}'_docker_status",
+                state_topic: $topic,
+                value_template: "{{ value_json }}",
+                device: $dev,
+                icon: "mdi:docker"
+            }')
+        mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_${PROXMOX_HOST}_${VMID}_docker_status/config" \
+            "$(echo "$DOCKER_STATUS_CONFIG" | jq -c .)"
+        
+        # Publish Docker status data (running)
+        mqtt_publish_retain "sl_docker/${PROXMOX_HOST}/${VMID}/docker_status" "running"
+    fi
 
     # Create deployment directory
     echo "Creating deployment directory..."
@@ -241,6 +311,10 @@ PASS=$PASS
 
 # Home Assistant Integration
 HA_BASE_TOPIC=$HA_BASE_TOPIC
+
+# Proxmox Information (for topic hierarchy)
+PROXMOX_HOST=$PROXMOX_HOST
+PROXMOX_VMID=$VMID
 
 # Device Configuration (generated)
 DEVICE_NAME=$DEVICE_NAME

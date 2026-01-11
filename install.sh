@@ -44,7 +44,6 @@ clear
 
 echo "┌─ SentryLab-Docker Installer ─────────────────────────────────────────────────┐"
 box_simple_line ""
-box_simple_line ""
 
 # Check prerequisites
 
@@ -79,11 +78,9 @@ box_simple_line "✓ Directories created"
 box_simple_line ""
 
 box_simple_line "Copying scripts..."
-cp scripts/setup-vmct.sh "$DEST_DIR/"
-cp scripts/utils.sh "$DEST_DIR/"
-chmod +x "$DEST_DIR/setup-vmct.sh"
-box_simple_line "✓ Copied: setup-vmct.sh"
-box_simple_line "✓ Copied: utils.sh"
+cp scripts/*.sh "$DEST_DIR/"
+chmod +x "$DEST_DIR"/*.sh
+box_simple_line "✓ Copied: setup-vmct.sh, remove-vmct.sh, utils.sh"
 box_simple_line ""
 
 box_simple_line "Copying templates..."
@@ -91,13 +88,8 @@ cp templates/discovery.py "$TPL_DIR/"
 cp templates/monitor.py "$TPL_DIR/"
 cp templates/startup.sh "$TPL_DIR/"
 cp templates/compose.yml "$TPL_DIR/"
-chmod +x "$TPL_DIR/discovery.py"
-chmod +x "$TPL_DIR/monitor.py"
-chmod +x "$TPL_DIR/startup.sh"
-box_simple_line "✓ Copied: discovery.py"
-box_simple_line "✓ Copied: monitor.py"
-box_simple_line "✓ Copied: startup.sh"
-box_simple_line "✓ Copied: compose.yml"
+chmod +x "$TPL_DIR"/*.py "$TPL_DIR"/*.sh
+box_simple_line "✓ Copied: discovery.py, monitor.py, startup.sh, compose.yml"
 box_simple_line ""
 
 box_simple_line "Copying VERSION file..."
@@ -105,10 +97,10 @@ cp VERSION "$SHARE_DIR/VERSION"
 box_simple_line "✓ Copied: VERSION"
 box_simple_line ""
 
-echo "Creating configuration..."
+box_simple_line "Creating configuration..."
 if [ -f "$CONF_FILE" ]; then
-    echo "⚠ Configuration file already exists: $CONF_FILE"
-    echo "  Keeping existing configuration"
+    box_simple_line "⚠ Configuration file already exists: $CONF_FILE"
+    box_simple_line "  Keeping existing configuration"
 else
     cp scripts/sentrylab.conf "$CONF_FILE"
     box_simple_line "✓ Created: $CONF_FILE"
