@@ -83,8 +83,7 @@ box_begin "Prerequisites Checks"
 # 13) Check if running on Proxmox (same behavior as install.sh)
 if [ ! -f /etc/pve/.version ]; then
     box_line "⚠ Warning: This doesn't appear to be a Proxmox host"
-    read -p "Continue anyway? (y/N): " -n 1 -r
-    echo ""
+    read -p "│ Continue anyway? (y/N): " -n 1 -r
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         box_end
         exit 1

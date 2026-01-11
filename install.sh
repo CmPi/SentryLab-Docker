@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #
 # @file install.sh
 # @author CmPi <github.com/CmPi>
@@ -123,6 +124,7 @@ box_simple_line "✓ Copied: SL_DOCKER_VERSION"
 box_simple_line ""
 
 # 34) Copy, if doesn't exist, config to /usr/local/etc/sentrylab.conf
+
 if [ -f "$CONF_FILE" ]; then
     box_simple_line "⚠ Configuration file already exists: $CONF_FILE"
     box_simple_line "  Keeping existing configuration"
