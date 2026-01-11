@@ -198,21 +198,25 @@ box_value "VM/CT ID (VMID)" "$VMID"
 box_value "VM/CT type (VM_TYPE)" "$VM_TYPE"
 box_value "VM/CT name" "$VM_NAME"
 
+DEVICE_JSON=$(jq -n \
+    --arg id "sentrylab_${PROXMOX_HOST}_${VMID}" \
+    --arg name "${VM_NAME} on ${PROXMOX_NODE}" \
+    --arg model "${VM_TYPE}" \
+    --arg mfr "SentryLab" \
+    '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
+
+HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
+
 # Publish initial VM/CT status discovery and data (status: absent)
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
-    HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
-    DEVICE_JSON=$(jq -n \
-        --arg id "sentrylab_${PROXMOX_HOST}_${VMID}" \
-        --arg name "${VM_NAME} on ${PROXMOX_NODE}" \
-        --arg model "${VM_TYPE}" \
-        --arg mfr "SentryLab" \
-        '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
-    
-    # VM/CT status discovery
-    VMCT_STATUS_CONFIG=$(jq -n \
-        --arg name "$VM_TYPE $VM_NAME Status" \
-        --arg unique_id "${PROXMOX_HOST}_${VMID}_status" \
-        --arg topic "sentrylab/${PROXMOX_HOST}/${VMID}/status" \
+    HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_status"
+    HA_LABEL=$(translate "vmct_status")
+    VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/status"
+    CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
+    PAYLOAD=$(jq -n \
+        --arg name "$HA_LABEL" \
+        --arg unique_id "$HA_ID" \
+        --arg topic "$VAL_TOPIC" \
         --argjson dev "$DEVICE_JSON" \
         '{
             name: $name,
@@ -223,8 +227,7 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
             device: $dev,
             icon: "mdi:server"
         }')
-    mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_${PROXMOX_HOST}_${VMID}_status/config" \
-        "$(echo "$VMCT_STATUS_CONFIG" | jq -c .)"
+    mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
 fi
 
 # Get Proxmox hostname for consistent topic hierarchy
@@ -266,8 +269,6 @@ if [ "$STATUS" != "running" ]; then
     fi
 fi
 
-
-
 # Function to execute commands in CT
 exec_cmd() {
     if [ "$IS_CT" = true ]; then
@@ -279,62 +280,54 @@ exec_cmd() {
     fi
 }
 
-# ==============================================================================
-# DEBUG MODE: Skip Docker deployment and only simulate MQTT publication
-# ==============================================================================
-if [ "${DEBUG:-false}" = "true" ]; then
-    box_begin "DEBUG MODE - Simulation Only"
+
+# Check if Docker is installed
+
+box_line "Checking Docker installation..."
+if ! exec_cmd which docker &>/dev/null; then
+    box_line "ERROR: Docker is not installed on $VM_TYPE $VMID"
     box_line ""
-    box_line "Docker deployment and Python scripts are DISABLED"
-    box_line "Only simulating MQTT configuration publication"
-    box_line ""
-    box_end
+    box_line "To install Docker, enter the CT and run:"
+    box_line "  pct enter $VMID"
+    box_line "  curl -fsSL https://get.docker.com | sh"
+    S_DOCKER_STATUS="absent"
 else
-    # ==============================================================================
-    # NORMAL MODE: Deploy Docker container and scripts
-    # ==============================================================================
+    S_DOCKER_STATUS="installed"
+fi
+box_line "✓ Docker is $S_DOCKER_STATUS"
+box_line ""
     
-    # Check if Docker is installed
-    echo "Checking Docker installation..."
-    if ! exec_cmd which docker &>/dev/null; then
-        echo "ERROR: Docker is not installed on $VM_TYPE $VMID"
-        echo ""
-        echo "To install Docker, enter the CT and run:"
-        echo "  pct enter $VMID"
-        echo "  curl -fsSL https://get.docker.com | sh"
-        exit 1
-    fi
-    echo "✓ Docker is installed"
-    echo ""
-    
-    # Publish Docker status discovery and data (running)
-    if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
-        HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
-        DEVICE_JSON=$(jq -n \
-            --arg id "sl_${PROXMOX_HOST}_${VMID}" \
-            --arg name "SentryLab Docker VM/CT" \
-            --arg model "SentryLab-Docker" \
-            --arg mfr "SentryLab" \
-            '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
-        
-        # Docker status discovery
-        DOCKER_STATUS_CONFIG=$(jq -n \
-            --argjson dev "$DEVICE_JSON" \
-            --arg topic "sl_docker/${PROXMOX_HOST}/${VMID}/docker_status" \
-            '{
-                name: "Docker Status",
-                unique_id: "'${PROXMOX_HOST}'_'${VMID}'_docker_status",
-                state_topic: $topic,
-                value_template: "{{ value_json }}",
-                device: $dev,
-                icon: "mdi:docker"
-            }')
-        mqtt_publish_retain "${HA_DISCOVERY_PREFIX}/sensor/sl_${PROXMOX_HOST}_${VMID}_docker_status/config" \
-            "$(echo "$DOCKER_STATUS_CONFIG" | jq -c .)"
-        
-        # Publish Docker status data (running)
-        mqtt_publish_retain "sl_docker/${PROXMOX_HOST}/${VMID}/docker_status" "running"
-    fi
+
+# Publish Docker status discovery and data (running)
+
+if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_status"
+    HA_LABEL=$(translate "vmct_docker_status")
+    VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker_status"
+    CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
+    # Publish Docker status discovery
+    PAYLOAD=$(jq -n \
+        --arg name "$HA_LABEL" \
+        --arg unique_id "$HA_ID" \
+        --arg object_id "$HA_ID" \
+        --arg topic "$VAL_TOPIC" \
+        --argjson dev "$DEVICE_JSON" \
+        '{
+            name: $name,
+            unique_id: $unique_id,
+            object_id: $unique_id,
+            state_topic: $topic,
+            value_template: "{{ value_json }}",
+            device: $dev,
+            icon: "mdi:docker"
+        }')
+    mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
+    # Publish Docker status data (running)
+    mqtt_publish_retain "$VAL_TOPIC" "$S_DOCKER_STATUS"
+fi
+
+exit 1
+
 
     # Create deployment directory
     echo "Creating deployment directory..."
@@ -446,7 +439,27 @@ EOF
     echo "  Stop service:"
     echo "    pct exec $VMID -- bash -c 'cd $DEPLOY_PATH && docker compose down'"
     echo ""
-fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ============================================================================
 # Publish VM/CT-level discovery and data topics to MQTT

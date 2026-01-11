@@ -511,7 +511,14 @@ translate() {
         ["disk_iops"]="IOPS|IOPS"
         ["disk_latency"]="Latency|Latence"
         ["lxc_container_state"]="Container|Conteneur"
-        ["vm_state"]="VM|VM"
+        ["vm_state"]="VM state|etat VM"
+        ["vm_status"]="VM status|status VM"
+        ["vmct_state"]="VM/CT state|etat VM/CT"
+        ["vmct_status"]="VM/CT status|status VM/CT"
+        ["vmct_docker_state"]="Docker state|VM"
+        ["vmct_docker_status"]="Docker status|VM"
+        ["vmct_sentrylab_state"]="SentrLab state|VM"
+        ["vmct_sentrylab_status"]="SentrLab status|VM"
     )
     
     local trans="${translations[$key]}"
