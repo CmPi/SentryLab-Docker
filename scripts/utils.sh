@@ -340,9 +340,6 @@ cleanup_csv_backups() {
         -exec rm -f {} \; 2>/dev/null || true
 }
 
-
-
-
 # Write CSV and return status message
 # Usage: result=$(write_csv "file.csv" "Header" "Data")
 # Write CSV with backup, cleanup and selective writing

@@ -17,7 +17,7 @@ SentryLab-Docker deploys lightweight Docker monitoring containers to your Proxmo
 
 ## Prerequisites
 
-In common Common SentryLab-PVE  / SentryLab-Docker 
+Common to SentryLab-PVE / SentryLab-Docker 
 
 - Proxmox VE host
 - MQTT broker (e.g., Mosquitto)

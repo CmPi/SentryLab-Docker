@@ -11,10 +11,40 @@
 
 set -euo pipefail
 
-echo "================================================"
-echo "SentryLab-Docker Installer"
-echo "================================================"
-echo ""
+BOX_WIDTH=80
+
+# Print text line in a box (for display inside box sections)
+# Usage: box_simple_line "Text" [width]
+box_simple_line() {
+    local text="${1-}"
+    local width="${2-$BOX_WIDTH}"
+    
+    # Validate width
+    if [[ ! "$width" =~ ^[0-9]+$ ]]; then
+        width=$BOX_WIDTH
+    fi
+    
+    local inner=$((width - 4))
+    
+    if [[ -z "$text" ]]; then
+        printf "│ %*s │\n" "$inner" ""
+    else
+        # Simple padding - just add spaces to reach inner width
+        local text_len=${#text}
+        if (( text_len >= inner )); then
+            printf "│ %s │\n" "${text:0:$inner}"
+        else
+            local padding=$((inner - text_len))
+            printf "│ %s%*s │\n" "$text" "$padding" ""
+        fi
+    fi
+}
+
+clear
+
+echo "┌─ SentryLab-Docker Installer ─────────────────────────────────────────────────┐"
+box_simple_line ""
+box_simple_line ""
 
 # Check prerequisites
 
@@ -36,11 +66,74 @@ fi
 
 CONF_FILE="/usr/local/etc/sentrylab.conf"
 DEST_DIR="/usr/local/bin/sentrylab"
-TPL_DIR="/usr/local/bin/sentrylab/templates"
+SHARE_DIR="/usr/local/share/sentrylab"
+TPL_DIR="/usr/local/share/sentrylab/templates"
 
-echo "Creating directories..."
+box_simple_line "Creating directories..."
 mkdir -p "$DEST_DIR"
 mkdir -p "$(dirname $CONF_FILE)"
 mkdir -p "$TPL_DIR"
-echo "✓ Directories created"
+box_simple_line "✓ Directories created"
+box_simple_line ""
+
+echo "Copying scripts..."
+cp scripts/setup-vmct.sh "$DEST_DIR/"
+chmod +x "$DEST_DIR/setup-vmct.sh"
+echo "✓ Copied: setup-vmct.sh"
 echo ""
+
+echo "Copying templates..."
+cp templates/discovery.py "$TPL_DIR/"
+cp templates/monitor.py "$TPL_DIR/"
+cp templates/startup.sh "$TPL_DIR/"
+cp templates/compose.yml "$TPL_DIR/"
+chmod +x "$TPL_DIR/discovery.py"
+chmod +x "$TPL_DIR/monitor.py"
+chmod +x "$TPL_DIR/startup.sh"
+echo "✓ Copied: discovery.py"
+echo "✓ Copied: monitor.py"
+echo "✓ Copied: startup.sh"
+echo "✓ Copied: compose.yml"
+echo ""
+
+echo "Copying VERSION file..."
+cp VERSION "$SHARE_DIR/VERSION"
+echo "✓ Copied: VERSION"
+echo ""
+
+echo "Creating configuration..."
+if [ -f "$CONF_FILE" ]; then
+    echo "⚠ Configuration file already exists: $CONF_FILE"
+    echo "  Keeping existing configuration"
+else
+    cp scripts/sentrylab.conf "$CONF_FILE"
+    box_simple_line "✓ Created: $CONF_FILE"
+    box_simple_line ""
+    box_simple_line "⚠ IMPORTANT: Edit the configuration file:"
+    box_simple_line "  sudo nano $CONF_FILE"
+    box_simple_line ""
+    box_simple_line "  Update these values:"
+    box_simple_line "    - BROKER (MQTT broker IP/hostname)"
+    box_simple_line "    - USER (MQTT username)"
+    box_simple_line "    - PASS (MQTT password)"
+fi
+
+box_simple_line ""
+box_simple_line "Installation Complete!"
+echo "└──────────────────────────────────────────────────────────────────────────────┘"
+echo ""
+
+# Display next steps
+
+echo "┌─ Next steps ─────────────────────────────────────────────────────────────────┐"
+box_simple_line ""
+box_simple_line "1. Configure MQTT settings:"
+box_simple_line "   sudo nano $CONF_FILE"
+box_simple_line ""
+box_simple_line "2. Deploy to a VM/CT:"
+box_simple_line "   sudo $DEST_DIR/setup-vmct.sh <VMID>"
+box_simple_line ""
+box_simple_line "Example:"
+box_simple_line "   sudo $DEST_DIR/setup-vmct.sh 100"
+box_simple_line ""
+echo "└──────────────────────────────────────────────────────────────────────────────┘"
