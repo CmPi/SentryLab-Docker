@@ -210,12 +210,14 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     
     # VM/CT status discovery
     VMCT_STATUS_CONFIG=$(jq -n \
-        --argjson dev "$DEVICE_JSON" \
+        --arg name "${VM_TYPE} ${VM_NAME} Status" \
+        --arg unique_id "${PROXMOX_HOST}_${VMID}_status" \
         --arg topic "sentrylab/${PROXMOX_HOST}/${VMID}/status" \
+        --argjson dev "$DEVICE_JSON" \
         '{
-            name: "${VM_TYPE} ${VM_NAME} Status",
-            unique_id: "'${PROXMOX_HOST}'_'${VMID}'_status",
-            object_id: "'${PROXMOX_HOST}'_'${VMID}'_status",
+            name: $name,
+            unique_id: $unique_id,
+            object_id: $unique_id,
             state_topic: $topic,
             value_template: "{{ value_json }}",
             device: $dev,
