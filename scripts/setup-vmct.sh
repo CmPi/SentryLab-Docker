@@ -176,12 +176,34 @@ fi
 # Get Proxmox hostname early for status publishing
 PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
 
+
+# Determine if it's a CT or VM
+IS_CT=false
+if pct status "$VMID" &>/dev/null; then
+    IS_CT=true
+    VM_NAME=$(pct config "$VMID" | grep "^hostname:" | awk '{print $2}')
+    VM_TYPE="CT"
+else
+    VM_NAME=$(qm config "$VMID" | grep "^name:" | awk '{print $2}')
+    VM_TYPE="VM"
+fi
+
+# Use VMID if name is empty
+if [ -z "$VM_NAME" ]; then
+    VM_NAME="vm${VMID}"
+fi
+
+box_value "Proxmox node (PROXMOX_NODE)" "$PROXMOX_NODE"
+box_value "VM/CT ID (VMID)" "$VMID"
+box_value "VM/CT type (VM_TYPE)" "$VM_TYPE"
+box_value "VM/CT name" "$VM_NAME"
+
 # Publish initial VM/CT status discovery and data (status: absent)
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     HA_DISCOVERY_PREFIX="${HA_BASE_TOPIC:-homeassistant}"
     DEVICE_JSON=$(jq -n \
         --arg id "sentrylab_${PROXMOX_HOST}_${VMID}" \
-        --arg name "SentryLab Docker VM/CT" \
+        --arg name "VM/CT ${VMID} on ${PROXMOX_NODE}" \
         --arg model "SentryLab-Docker" \
         --arg mfr "SentryLab" \
         '{identifiers: [$id], name: $name, model: $model, manufacturer: $mfr}')
@@ -202,21 +224,6 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
         "$(echo "$VMCT_STATUS_CONFIG" | jq -c .)"
 fi
 
-# Determine if it's a CT or VM
-IS_CT=false
-if pct status "$VMID" &>/dev/null; then
-    IS_CT=true
-    VM_NAME=$(pct config "$VMID" | grep "^hostname:" | awk '{print $2}')
-    VM_TYPE="CT"
-else
-    VM_NAME=$(qm config "$VMID" | grep "^name:" | awk '{print $2}')
-    VM_TYPE="VM"
-fi
-
-# Use VMID if name is empty
-if [ -z "$VM_NAME" ]; then
-    VM_NAME="vm${VMID}"
-fi
 
 # Get Proxmox hostname for consistent topic hierarchy
 PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
@@ -225,13 +232,12 @@ PROXMOX_HOST=$(hostname -s | tr '[:upper:]' '[:lower:]')
 DEVICE_NAME="Docker ${VM_NAME} (${PROXMOX_HOST})"
 DEVICE_ID="docker_${PROXMOX_HOST}_${VMID}"
 
-echo "VM/CT ID:    $VMID"
-echo "Type:        $VM_TYPE"
-echo "Name:        $VM_NAME"
-echo "Device Name: $DEVICE_NAME"
-echo "Device ID:   $DEVICE_ID"
-echo "Deploy Path: $DEPLOY_PATH"
-echo ""
+box_value "Type"        "$VM_TYPE"
+box_value "Name"        "$VM_NAME"
+box_value "Device Name" "$DEVICE_NAME"
+box_value "Device ID"   "$DEVICE_ID"
+box_value "Deploy Path" "$DEPLOY_PATH"
+box_line ""
 
 # Check if VM/CT is running
 if [ "$IS_CT" = true ]; then
