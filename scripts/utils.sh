@@ -519,6 +519,7 @@ translate() {
         ["vmct_docker_status"]="Docker status|Statut de docker"
         ["vmct_sentrylab_state"]="SentrLab state|etat de sentrylab"
         ["vmct_sentrylab_status"]="SentrLab status|Staatut de sentrylab"
+        ["docker_version"]="docker version|Version de docker"
     )
     
     local trans="${translations[$key]}"

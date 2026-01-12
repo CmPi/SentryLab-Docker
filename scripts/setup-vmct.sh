@@ -392,7 +392,7 @@ box_line "✓ Docker is $S_DOCKER_STATUS"
 
 
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
-    box_line "Publishing Docker status discovery..."
+    box_line "Publishing Docker status discovery... 2h26"
 
     HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_status"
     HA_LABEL=$(translate "vmct_docker_status")
@@ -419,7 +419,7 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     
 
     HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_version"
-    HA_LABEL=$(translate "vmct_docker_status")
+    HA_LABEL=$(translate "docker_version")
     VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker"
     CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
     # Publish Docker status discovery
