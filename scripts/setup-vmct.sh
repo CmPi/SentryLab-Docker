@@ -257,7 +257,9 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     if [ "$STATUS" != "running" ]; then
         VMCT_STATUS_VALUE="stopped"
     fi
-    mqtt_publish_retain "sentrylab/${PROXMOX_HOST}/${VMID}/status" "$VMCT_STATUS_VALUE"
+    mqtt_publish_retain "$VAL_TOPIC" "$VMCT_STATUS_VALUE"
+else
+    echo "WARNING: MQTT broker not configured"    
 fi
 
 if [ "$STATUS" != "running" ]; then
@@ -301,6 +303,7 @@ box_line ""
 # Publish Docker status discovery and data (running)
 
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
+    box_line "Publishing Docker status discovery..."
     HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_status"
     HA_LABEL=$(translate "vmct_docker_status")
     VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker_status"
@@ -323,7 +326,10 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
         }')
     mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
     # Publish Docker status data (running)
+    box_line "Publishing Docker status state..."
     mqtt_publish_retain "$VAL_TOPIC" "$S_DOCKER_STATUS"
+else
+    box_line "WARNING: MQTT broker not configured"    
 fi
 
 exit 1
