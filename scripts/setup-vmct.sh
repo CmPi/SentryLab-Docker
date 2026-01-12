@@ -272,34 +272,39 @@ if [ "$STATUS" != "running" ]; then
 fi
 
 # Keep this function simple
+# 1. Update the function to be more robust
 exec_cmd() {
-    # We use 'raw' pct exec here to capture the true exit code
-    pct exec "$VMID" -- bash -c "$*"
+    if [ "$IS_CT" = true ]; then
+        # Use -- to separate pct args from the command
+        # Wrap in bash -c to handle piping/logic inside the CT
+        pct exec "$VMID" -- bash -c "$*"
+    else
+        echo "ERROR: VM deployment not yet supported"
+        exit 1
+    fi
 }
 
 box_line "Checking Docker installation..."
 
-# 1. Run the check and capture the exit code manually
-# 2. Use '|| true' to prevent 'set -e' from killing the script
-exec_cmd "command -v docker" &>/dev/null
-DOCKER_EXISTS=$?
+# 2. RUN THE CHECK AND FORCE A PASS (|| true)
+# This prevents the script from stopping if the command fails
+# We capture the output in a variable instead of using it in an 'if' directly
+DOCKER_PATH=$(exec_cmd "command -v docker" 2>/dev/null || true)
 
-if [ $DOCKER_EXISTS -ne 0 ]; then
+if [ -z "$DOCKER_PATH" ]; then
     S_DOCKER_STATUS="absent"
     box_line "ERROR: Docker is not installed on $VM_TYPE $VMID"
-    box_line ""
-    box_line "To install Docker, enter the CT and run:"
-    box_line "  pct enter $VMID"
-    box_line "  curl -fsSL https://get.docker.com | sh"
+    # ... rest of your error instructions
 else
-    # Double check if the service is actually responding
-    exec_cmd "docker info" &>/dev/null
-    if [ $? -eq 0 ]; then
+    # 3. If binary exists, check if the service is actually alive
+    if exec_cmd "docker info" &>/dev/null; then
         S_DOCKER_STATUS="installed and running"
     else
         S_DOCKER_STATUS="installed but service stopped"
     fi
 fi
+
+box_line "✓ Docker is $S_DOCKER_STATUS"
 
 box_line "✓ Docker is $S_DOCKER_STATUS"
 
