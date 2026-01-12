@@ -36,7 +36,7 @@
 #     - sl_docker/<proxmox_hostname>/<vmct id>/last_monitor_time
 
 
-set -e
+#set -e
 
 PROXMOX_NODE=$(hostname -s)
 
