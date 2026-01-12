@@ -271,30 +271,39 @@ if [ "$STATUS" != "running" ]; then
     fi
 fi
 
-# Optimized Function
+# Keep this function simple
 exec_cmd() {
-    if [ "$IS_CT" = true ]; then
-        # Only log to console if we aren't trying to capture quiet output
-        # box_line "Executing: $*" 
-        pct exec "$VMID" -- bash -c "$*"
-    else
-        echo "ERROR: VM deployment not yet supported"
-        exit 1
-    fi
+    # We use 'raw' pct exec here to capture the true exit code
+    pct exec "$VMID" -- bash -c "$*"
 }
 
-# Optimized Check
 box_line "Checking Docker installation..."
 
-# We use 'command -v' instead of 'which'
-# We wrap it in bash -c to ensure the environment inside the CT handles it correctly
-if ! pct exec "$VMID" -- command -v docker >/dev/null 2>&1; then
-    box_line "ERROR: Docker is not installed on $VM_TYPE $VMID"
-    # ... rest of your error logic
+# 1. Run the check and capture the exit code manually
+# 2. Use '|| true' to prevent 'set -e' from killing the script
+exec_cmd "command -v docker" &>/dev/null
+DOCKER_EXISTS=$?
+
+if [ $DOCKER_EXISTS -ne 0 ]; then
     S_DOCKER_STATUS="absent"
+    box_line "ERROR: Docker is not installed on $VM_TYPE $VMID"
+    box_line ""
+    box_line "To install Docker, enter the CT and run:"
+    box_line "  pct enter $VMID"
+    box_line "  curl -fsSL https://get.docker.com | sh"
 else
-    S_DOCKER_STATUS="installed"
+    # Double check if the service is actually responding
+    exec_cmd "docker info" &>/dev/null
+    if [ $? -eq 0 ]; then
+        S_DOCKER_STATUS="installed and running"
+    else
+        S_DOCKER_STATUS="installed but service stopped"
+    fi
 fi
+
+box_line "✓ Docker is $S_DOCKER_STATUS"
+
+
 # Publish Docker status discovery and data (running)
 
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
