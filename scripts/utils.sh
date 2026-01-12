@@ -515,10 +515,10 @@ translate() {
         ["vm_status"]="VM status|status VM"
         ["vmct_state"]="VM/CT state|etat VM/CT"
         ["vmct_status"]="VM/CT status|status de la VM/CT"
-        ["vmct_docker_state"]="Docker state|VM"
+        ["vmct_docker_state"]="Docker state|etat du ct/vM"
         ["vmct_docker_status"]="Docker status|Statut de docker"
-        ["vmct_sentrylab_state"]="SentrLab state|VM"
-        ["vmct_sentrylab_status"]="SentrLab status|VM"
+        ["vmct_sentrylab_state"]="SentrLab state|etat de sentrylab"
+        ["vmct_sentrylab_status"]="SentrLab status|Staatut de sentrylab"
     )
     
     local trans="${translations[$key]}"
