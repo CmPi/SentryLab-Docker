@@ -274,38 +274,118 @@ fi
 
 
 
-# Function to execute commands - Removed 'exit 1' to prevent script death
+
+
+
+
+
+
+
+
+
+
+
+
+# Function to execute commands - works for both CT and VM
 exec_cmd() {
     if [ "$IS_CT" = true ]; then
-        # We use || true to ensure the function itself returns 0 
-        # so 'set -e' doesn't kill the script
         pct exec "$VMID" -- bash -c "$*"
+        return $?
     else
-        # Return a custom error code instead of exiting
-        return 255
+        # For VM, use qm guest exec (requires qemu-guest-agent)
+        qm guest exec "$VMID" -- bash -c "$*"
+        return $?
     fi
 }
 
-box_line "Checking Docker installation..."
+# Initialize Docker availability flag
+DOCKER_AVAILABLE=false
 
-# Attempt to find docker path
-# We capture output and ignore the exit code of the command itself
-DOCKER_BIN=$(exec_cmd "command -v docker" 2>/dev/null || echo "")
+box_line "Checking system accessibility... 01h42"
 
-if [ "$DOCKER_BIN" = "255" ]; then
-    S_DOCKER_STATUS="unsupported (VM)"
-    box_line "ERROR: VM deployment not yet supported."
-elif [ -z "$DOCKER_BIN" ]; then
-    S_DOCKER_STATUS="absent"
-    box_line "ERROR: Docker is not installed on CT $VMID"
-    box_line "To install: pct enter $VMID && curl -fsSL https://get.docker.com | sh"
+# For VMs, verify qemu-guest-agent is available
+if [ "$IS_CT" = false ]; then
+    if ! qm guest ping "$VMID" >/dev/null 2>&1; then
+        S_DOCKER_STATUS="unreachable"
+        box_line "⚠ WARNING: Cannot communicate with VM $VMID"
+        box_line "The qemu-guest-agent is not running or not installed."
+        box_line ""
+        box_line "To fix this:"
+        box_line "  1. Access your VM console or SSH into it"
+        box_line "  2. Install: apt-get install qemu-guest-agent"
+        box_line "  3. Enable: systemctl enable --now qemu-guest-agent"
+        box_line "  4. Wait ~10 seconds for Proxmox to detect it"
+        box_line ""
+        box_line "Continuing without Docker checks..."
+    else
+        box_line "✓ Guest agent is responding"
+        
+        box_line "Checking Docker installation..."
+        
+        # Try to find docker
+        if DOCKER_BIN=$(exec_cmd "command -v docker" 2>/dev/null); then
+            # Get Docker version for confirmation
+            DOCKER_VERSION=$(exec_cmd "docker --version" 2>/dev/null | cut -d' ' -f3 | tr -d ',')
+            
+            # Check if Docker daemon is running
+            if exec_cmd "docker ps" >/dev/null 2>&1; then
+                DOCKER_AVAILABLE=true
+                S_DOCKER_STATUS="running"
+                box_line "✓ Docker $DOCKER_VERSION is installed and running"
+            else
+                S_DOCKER_STATUS="stopped"
+                box_line "⚠ WARNING: Docker is installed but daemon is not running"
+                box_line "Try: systemctl start docker"
+            fi
+        else
+            S_DOCKER_STATUS="absent"
+            box_line "⚠ WARNING: Docker is not installed on VM $VMID"
+            box_line "To install: curl -fsSL https://get.docker.com | sh"
+        fi
+    fi
 else
-    S_DOCKER_STATUS="installed"
+    # Container checks
+    box_line "Checking Docker installation..."
+    
+    if DOCKER_BIN=$(exec_cmd "command -v docker" 2>/dev/null); then
+        DOCKER_VERSION=$(exec_cmd "docker --version" 2>/dev/null | cut -d' ' -f3 | tr -d ',')
+        
+        if exec_cmd "docker ps" >/dev/null 2>&1; then
+            DOCKER_AVAILABLE=true
+            S_DOCKER_STATUS="running"
+            box_line "✓ Docker $DOCKER_VERSION is installed and running"
+        else
+            S_DOCKER_STATUS="stopped"
+            box_line "⚠ WARNING: Docker is installed but daemon is not running"
+            box_line "Try: systemctl start docker"
+        fi
+    else
+        S_DOCKER_STATUS="absent"
+        box_line "⚠ WARNING: Docker is not installed on CT $VMID"
+        box_line "To install: pct enter $VMID && curl -fsSL https://get.docker.com | sh"
+    fi
+fi
+
+# Continue with the rest of the script...
+box_line "Docker status: $S_DOCKER_STATUS"
+
+# Later in the script, you can check before Docker operations:
+if [ "$DOCKER_AVAILABLE" = true ]; then
+    box_line "Proceeding with Docker operations..."
+    # Do Docker stuff
+else
+    box_line "⚠ Skipping Docker operations (Docker not available)"
+    # Skip Docker-related tasks
 fi
 
 
 
+
+
+
 box_line "✓ Docker is $S_DOCKER_STATUS"
+
+
 
 
 # Publish Docker status discovery and data (running)
