@@ -391,15 +391,13 @@ box_line "✓ Docker is $S_DOCKER_STATUS"
 # Publish Docker status discovery and data (running)
 
 
-
-
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     box_line "Publishing Docker status discovery..."
+
     HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_status"
     HA_LABEL=$(translate "vmct_docker_status")
-    VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker_status"
+    VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker"
     CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
-    
     # Publish Docker status discovery
     PAYLOAD=$(jq -n \
         --arg name "$HA_LABEL" \
@@ -419,6 +417,31 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
         }')
     mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
     
+
+    HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_version"
+    HA_LABEL=$(translate "vmct_docker_status")
+    VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker"
+    CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
+    # Publish Docker status discovery
+    PAYLOAD=$(jq -n \
+        --arg name "$HA_LABEL" \
+        --arg unique_id "$HA_ID" \
+        --arg object_id "$HA_ID" \
+        --arg topic "$VAL_TOPIC" \
+        --argjson dev "$DEVICE_JSON" \
+        '{
+            name: $name,
+            unique_id: $unique_id,
+            object_id: $unique_id,
+            state_topic: $topic,
+            value_template: "{{ value_json.version }}",
+            json_attributes_topic: $topic,
+            device: $dev,
+            icon: "mdi:docker"
+        }')
+    mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
+
+
     # Publish Docker status data (as JSON)
     box_line "Publishing Docker status state as a json... 02h07"
     STATUS_PAYLOAD=$(jq -n \
