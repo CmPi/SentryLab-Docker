@@ -420,7 +420,7 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
     
     # Publish Docker status data (as JSON)
-    box_line "Publishing Docker status state..."
+    box_line "Publishing Docker status state as a json... 02h07"
     STATUS_PAYLOAD=$(jq -n \
         --arg status "$S_DOCKER_STATUS" \
         --arg docker_bin "${DOCKER_BIN:-none}" \
