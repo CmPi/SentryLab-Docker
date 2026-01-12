@@ -223,7 +223,7 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
             unique_id: $unique_id,
             object_id: $unique_id,
             state_topic: $topic,
-            value_template: "{{ value_json }}",
+            value_template: "{{ value }}",
             device: $dev,
             icon: "mdi:server"
         }')
