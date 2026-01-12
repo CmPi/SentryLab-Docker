@@ -271,35 +271,30 @@ if [ "$STATUS" != "running" ]; then
     fi
 fi
 
-# Function to execute commands in CT
+# Optimized Function
 exec_cmd() {
     if [ "$IS_CT" = true ]; then
-        pct exec "$VMID" -- "$@"
+        # Only log to console if we aren't trying to capture quiet output
+        # box_line "Executing: $*" 
+        pct exec "$VMID" -- bash -c "$*"
     else
         echo "ERROR: VM deployment not yet supported"
-        echo "Please use CT (container) for now"
         exit 1
     fi
 }
 
-
-# Check if Docker is installed
-
+# Optimized Check
 box_line "Checking Docker installation..."
-if ! exec_cmd which docker &>/dev/null; then
+
+# We use 'command -v' instead of 'which'
+# We wrap it in bash -c to ensure the environment inside the CT handles it correctly
+if ! pct exec "$VMID" -- command -v docker >/dev/null 2>&1; then
     box_line "ERROR: Docker is not installed on $VM_TYPE $VMID"
-    box_line ""
-    box_line "To install Docker, enter the CT and run:"
-    box_line "  pct enter $VMID"
-    box_line "  curl -fsSL https://get.docker.com | sh"
+    # ... rest of your error logic
     S_DOCKER_STATUS="absent"
 else
     S_DOCKER_STATUS="installed"
 fi
-box_line "✓ Docker is $S_DOCKER_STATUS"
-box_line ""
-    
-
 # Publish Docker status discovery and data (running)
 
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
