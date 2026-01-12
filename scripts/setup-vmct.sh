@@ -396,6 +396,7 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     HA_LABEL=$(translate "vmct_docker_status")
     VAL_TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}/docker_status"
     CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
+    
     # Publish Docker status discovery
     PAYLOAD=$(jq -n \
         --arg name "$HA_LABEL" \
@@ -408,14 +409,28 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
             unique_id: $unique_id,
             object_id: $unique_id,
             state_topic: $topic,
-            value_template: "{{ value_json }}",
+            value_template: "{{ value_json.status }}",
+            json_attributes_topic: $topic,
+            json_attributes_template: "{{ {\"version\": value_json.version, \"path\": value_json.path, \"available\": value_json.available} | tojson }}",
             device: $dev,
             icon: "mdi:docker"
         }')
     mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
-    # Publish Docker status data (running)
+    
+    # Publish Docker status data (as JSON)
     box_line "Publishing Docker status state..."
-    mqtt_publish_retain "$VAL_TOPIC" "$S_DOCKER_STATUS"
+    STATUS_PAYLOAD=$(jq -n \
+        --arg status "$S_DOCKER_STATUS" \
+        --arg docker_bin "${DOCKER_BIN:-none}" \
+        --arg docker_version "${DOCKER_VERSION:-unknown}" \
+        --argjson available "$([ "$DOCKER_AVAILABLE" = true ] && echo true || echo false)" \
+        '{
+            status: $status,
+            available: $available,
+            path: $docker_bin,
+            version: $docker_version
+        }')
+    mqtt_publish_retain "$VAL_TOPIC" "$STATUS_PAYLOAD"
 else
     box_line "WARNING: MQTT broker not configured"    
 fi
