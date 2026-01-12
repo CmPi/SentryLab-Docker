@@ -390,6 +390,9 @@ box_line "✓ Docker is $S_DOCKER_STATUS"
 
 # Publish Docker status discovery and data (running)
 
+
+
+
 if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     box_line "Publishing Docker status discovery..."
     HA_ID="sentrylab_${PROXMOX_HOST}_${VMID}_docker_status"
@@ -411,7 +414,6 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
             state_topic: $topic,
             value_template: "{{ value_json.status }}",
             json_attributes_topic: $topic,
-            json_attributes_template: "{{ {\"version\": value_json.version, \"path\": value_json.path, \"available\": value_json.available} | tojson }}",
             device: $dev,
             icon: "mdi:docker"
         }')
@@ -431,9 +433,30 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
             version: $docker_version
         }')
     mqtt_publish_retain "$VAL_TOPIC" "$STATUS_PAYLOAD"
+    
+    # Debug: show what we're sending
+    box_line "Sent to $VAL_TOPIC: $STATUS_PAYLOAD"
 else
     box_line "WARNING: MQTT broker not configured"    
 fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 exit 1
 

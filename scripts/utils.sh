@@ -514,9 +514,9 @@ translate() {
         ["vm_state"]="VM state|etat VM"
         ["vm_status"]="VM status|status VM"
         ["vmct_state"]="VM/CT state|etat VM/CT"
-        ["vmct_status"]="VM/CT status|status VM/CT"
+        ["vmct_status"]="VM/CT status|status de la VM/CT"
         ["vmct_docker_state"]="Docker state|VM"
-        ["vmct_docker_status"]="Docker status|VM"
+        ["vmct_docker_status"]="Docker status|Statut de docker"
         ["vmct_sentrylab_state"]="SentrLab state|VM"
         ["vmct_sentrylab_status"]="SentrLab status|VM"
     )
