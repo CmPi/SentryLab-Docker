@@ -134,7 +134,7 @@ done
 
 
 S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
-S_ENTRIES_LST=("uptime" "image" "health")
+S_ENTRIES_LST=("uptime" "image" "health" "state")
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
     for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
@@ -145,4 +145,8 @@ for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
             then ((TOPICS_DELETED++)); 
         fi
     done
+    if mqtt_delete_safe "homeassistant/binary_sensor/sentrylab_albusnexus_${VMID}_${S_CONTAINER}_status/config"; 
+        then ((TOPICS_DELETED++)); 
+    fi
+
 done
