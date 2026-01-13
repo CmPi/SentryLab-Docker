@@ -68,7 +68,7 @@ fi
 # ==============================================================================
 # Remove Topics
 # ==============================================================================
-box_line "Removing MQTT topics... 19h42"
+box_line "Removing MQTT topics... 19h42 ?"
 box_line ""
 
 # Count of topics deleted
