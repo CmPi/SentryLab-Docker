@@ -252,6 +252,36 @@ mqtt_delete_retained() {
     fi
 }
 
+# Safely delete a retained MQTT topic with diagnostics
+# Usage: mqtt_delete_safe "topic" ["note"]
+mqtt_delete_safe() {
+    local topic="$1"
+    local note="${2:-}"
+
+    if [[ -z "$topic" ]]; then
+        log_error "mqtt_delete_safe: topic is empty"
+        return 1
+    fi
+
+    if [[ -n "$note" ]]; then
+        echo "  Deleting: $topic $note"
+    else
+        echo "  Deleting: $topic"
+    fi
+
+    if mqtt_delete_retained "$topic"; then
+        log_debug "mqtt_delete_safe: deleted $topic"
+        return 0
+    else
+        echo "  ERROR: Failed to delete retained topic: $topic" >&2
+        if [[ "${DEBUG:-false}" == "true" ]]; then
+            echo "  DEBUG: mosquitto_pub diagnostic:" >&2
+            mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>&1 || true
+        fi
+        return 1
+    fi
+}
+
 # Publish MQTT message without retain flag (for transient data)
 # Usage: mqtt_publish_no_retain "topic" "payload"
 mqtt_publish_no_retain() {

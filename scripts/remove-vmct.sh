@@ -77,74 +77,50 @@ TOPICS_DELETED=0
 # Requirement 2.21.1: Remove homeassistant/sensor discovery configs (sl_<proxmox_node>_<vmid>_*)
 # VM/CT Status discovery
 TOPIC="homeassistant/sensor/sl_${PROXMOX_HOST}_${VMID}_status/config"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 # Docker Status discovery
 TOPIC="homeassistant/sensor/sl_${PROXMOX_HOST}_${VMID}_docker_status/config"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 # Requirement 2.21.2: Remove homeassistant/binary_sensor discovery configs (sl_<proxmox_node>_<vmid>_*)
 # (Container status binary sensors from discovery.py)
 TOPIC="homeassistant/binary_sensor/sl_${PROXMOX_HOST}_${VMID}_deployment_status/config"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 # Requirement 2.22.1: Remove sl_docker/<proxmox_node>/<vmid>/* data topics
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/status"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/docker_status"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/deployed"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/deployed_time"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC"
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/last_discovery_time"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC"
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/last_monitor_time"
-echo "  Deleting: $TOPIC"
-mqtt_delete_retained "$TOPIC"
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC"; then ((TOPICS_DELETED++)); fi
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/containers"
-echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_delete_retained "$TOPIC"
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC" "(and all subtopics)"; then ((TOPICS_DELETED++)); fi
 
 # Requirement 2.22.2: Remove proxmox/<proxmox_node>/<vmid>/* data topics (legacy)
 echo ""
 echo "  Cleaning up legacy proxmox/* topics..."
 TOPIC="proxmox/${PROXMOX_HOST}/${VMID}"
-echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC" "(and all subtopics)"; then ((TOPICS_DELETED++)); fi
 
 # Requirement 2.22.3: Remove sentrylab/<proxmox_node>/<vmid>/* data topics (unified standard)
 echo ""
 echo "  Cleaning up standard sentrylab/* topics..."
 TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}"
-echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_delete_retained "$TOPIC" 
-((TOPICS_DELETED++))
+if mqtt_delete_safe "$TOPIC" "(and all subtopics)"; then ((TOPICS_DELETED++)); fi
 
 echo ""
 box_line "✓ Removed $TOPICS_DELETED MQTT topics for VMID $VMID"
@@ -153,11 +129,11 @@ echo ""
 
 S_SUBTOPIC_LST=("total" "running" "stopped")
 for S_SUBTOPIC in "${S_SUBTOPIC_LST[@]}"; do
-    mqtt_delete_retained "homeassistant/sensor/docker_docker_albusnexus_$VMID/${S_SUBTOPIC}/config"
+    if mqtt_delete_safe "homeassistant/sensor/docker_docker_albusnexus_$VMID/${S_SUBTOPIC}/config"; then ((TOPICS_DELETED++)); fi
 done
 
 S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
-    mqtt_delete_retained "homeassistant/sensor/sl_docker_albusnexus_$VMID_${S_CONTAINER}_uptime/config"
+    if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_$VMID_${S_CONTAINER}_uptime/config"; then ((TOPICS_DELETED++)); fi
 done
