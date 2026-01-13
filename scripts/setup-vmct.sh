@@ -549,8 +549,6 @@ EOF
 
         # Start the service
 
-        exit 1
-
         echo "Starting Docker monitoring service..."
         exec_cmd bash -c "cd $DEPLOY_PATH && docker compose up -d"
         echo "✓ Service started"
