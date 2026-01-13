@@ -280,7 +280,7 @@ box_line "279 - S_VMCT_STATUS: $S_VMCT_STATUS"
 
 # Depending on VM/CT status, go further and check broker status
 
-if [ "S_VMCT_STATUS" = "running" ]; then
+if [ "$S_VMCT_STATUS" = "running" ]; then
 
 
     # Function to execute commands - works for both CT and VM
