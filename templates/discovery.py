@@ -39,7 +39,7 @@ PASS = os.getenv("PASS", "")
 HA_BASE_TOPIC = os.getenv("HA_BASE_TOPIC", "homeassistant")
 DEVICE_NAME = os.getenv("DEVICE_NAME", "Docker Host")
 DEVICE_ID = os.getenv("DEVICE_ID", "docker_host")
-PROXMOX_HOST = os.getenv("PROXMOX_HOST", "proxmox")
+ID_PROXMOX = os.getenv("ID_PROXMOX", "proxmox")
 PROXMOX_VMID = os.getenv("PROXMOX_VMID", "0")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -103,7 +103,7 @@ def publish_container_discovery(mqtt_client, container):
     device_info = create_device_info()
     
     # Topic prefix following hierarchy: sl_docker_<proxmox_host>_<vmid>_<container_name>
-    topic_prefix = f"sl_docker_{PROXMOX_HOST}_{PROXMOX_VMID}_{safe_name}"
+    topic_prefix = f"sl_docker_{ID_PROXMOX}_{PROXMOX_VMID}_{safe_name}"
     
     # Get container image info
     try:
