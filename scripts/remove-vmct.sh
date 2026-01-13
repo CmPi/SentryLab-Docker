@@ -134,7 +134,7 @@ done
 
 
 S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
-S_ENTRIES_LST=("uptime" "image" "health" "state" "deployed_time" "cpu_usage" "mem_usage" "net_in" "net_out" "disk_read" "disk_write")
+S_ENTRIES_LST=("uptime" "image" "health" "state" "deployed_time" "last_discovery_time" "last_monitor_time" "cpu_usage" "mem_usage" "net_in" "net_out" "disk_read" "disk_write")
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
     for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
