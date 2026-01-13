@@ -551,7 +551,7 @@ EOF
 
         echo "Starting Docker monitoring service..."
         # Verify compose and env files exist, print diagnostics if not, then run compose
-        exec_cmd bash -c "if [ -f '$DEPLOY_PATH/compose.yml' ] && [ -f '$DEPLOY_PATH/.env' ]; then cd '$DEPLOY_PATH' && docker compose -f compose.yml --env-file .env up -d; else echo 'ERROR: compose.yml or .env not found in $DEPLOY_PATH'; ls -la '$DEPLOY_PATH' || true; exit 1; fi"
+        exec_cmd "if [ -f '$DEPLOY_PATH/compose.yml' ] && [ -f '$DEPLOY_PATH/.env' ]; then cd '$DEPLOY_PATH' && docker compose -f compose.yml --env-file .env up -d; else echo 'ERROR: compose.yml or .env not found in $DEPLOY_PATH'; ls -la '$DEPLOY_PATH' || true; exit 1; fi"
         echo "✓ Service started"
         echo ""
 
