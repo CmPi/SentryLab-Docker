@@ -276,7 +276,7 @@ mqtt_delete_safe() {
         echo "  ERROR: Failed to delete retained topic: $topic" >&2
         if [[ "${DEBUG:-false}" == "true" ]]; then
             echo "  DEBUG: mosquitto_pub diagnostic:" >&2
-            mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>&1 || true
+            mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>&1 </dev/null || true
         fi
         return 1
     fi
