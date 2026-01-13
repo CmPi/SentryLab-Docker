@@ -78,56 +78,56 @@ TOPICS_DELETED=0
 # VM/CT Status discovery
 TOPIC="homeassistant/sensor/sl_${PROXMOX_HOST}_${VMID}_status/config"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 # Docker Status discovery
 TOPIC="homeassistant/sensor/sl_${PROXMOX_HOST}_${VMID}_docker_status/config"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 # Requirement 2.21.2: Remove homeassistant/binary_sensor discovery configs (sl_<proxmox_node>_<vmid>_*)
 # (Container status binary sensors from discovery.py)
 TOPIC="homeassistant/binary_sensor/sl_${PROXMOX_HOST}_${VMID}_deployment_status/config"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 # Requirement 2.22.1: Remove sl_docker/<proxmox_node>/<vmid>/* data topics
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/status"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/docker_status"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/deployed"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/deployed_time"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC"
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/last_discovery_time"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC"
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/last_monitor_time"
 echo "  Deleting: $TOPIC"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC"
 ((TOPICS_DELETED++))
 
 TOPIC="sl_docker/${PROXMOX_HOST}/${VMID}/containers"
 echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC"
 ((TOPICS_DELETED++))
 
 # Requirement 2.22.2: Remove proxmox/<proxmox_node>/<vmid>/* data topics (legacy)
@@ -135,7 +135,7 @@ echo ""
 echo "  Cleaning up legacy proxmox/* topics..."
 TOPIC="proxmox/${PROXMOX_HOST}/${VMID}"
 echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 # Requirement 2.22.3: Remove sentrylab/<proxmox_node>/<vmid>/* data topics (unified standard)
@@ -143,7 +143,7 @@ echo ""
 echo "  Cleaning up standard sentrylab/* topics..."
 TOPIC="sentrylab/${PROXMOX_HOST}/${VMID}"
 echo "  Deleting: $TOPIC (and all subtopics)"
-mqtt_publish_retain "$TOPIC" ""
+mqtt_delete_retained "$TOPIC" 
 ((TOPICS_DELETED++))
 
 echo ""
