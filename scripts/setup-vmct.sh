@@ -432,7 +432,7 @@ if [ "$S_VMCT_STATUS" = "running" ]; then
             mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
         else
             box_line "Removing eventual existing Docker version discovery."
-            mqtt_publish "$CFG_TOPIC" ""
+            mqtt_delete_retained "$CFG_TOPIC"
         fi
 
         # Publish Docker status data (as JSON)
