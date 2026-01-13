@@ -247,7 +247,6 @@ fi
 DEVICE_NAME="Docker ${VM_NAME} (${ID_PROXMOX})"
 DEVICE_ID="docker_${ID_PROXMOX}_${VMID}"
 
-box_value "Type"        "$VM_TYPE"
 box_value "Name"        "$VM_NAME"
 box_value "Device Name" "$DEVICE_NAME"
 box_value "Device ID"   "$DEVICE_ID"
@@ -276,6 +275,8 @@ else
     box_line "WARNING: MQTT broker not configured"    
 fi
 
+
+box_line "279 - S_VMCT_STATUS: $S_VMCT_STATUS"
 
 # Depending on VM/CT status, go further and check broker status
 
