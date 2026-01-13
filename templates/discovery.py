@@ -7,6 +7,17 @@
 @version 0.1.11
 
 Publishes MQTT discovery configs for Home Assistant auto-discovery
+
+IMPLEMENTATION NOTES:
+
+1) Preliminary checks
+   11) If PASS or USER are not set, exit logging an error
+   12) If Broker is not set, exit logging an error
+
+   19) If log level is set to info, output in logs the configuration used (DEVICE_ID, DEVICE_NAME, BROKER, PORT, USER, HA_BASE_TOPIC, ID_PROXMOX, PROXMOX_VMID...) 
+
+
+
 """
 
 import os
@@ -30,6 +41,8 @@ if SENTRYLAB_VERSION == "unknown":
             SENTRYLAB_VERSION = f.read().strip()
     except:
         SENTRYLAB_VERSION = "unknown"
+
+# 1) Preliminary checks
 
 # Configuration from environment variables (aligned with SentryLab-PVE)
 BROKER = os.getenv("BROKER", "localhost")
@@ -103,7 +116,7 @@ def publish_container_discovery(mqtt_client, container):
     device_info = create_device_info()
     
     # Topic prefix following hierarchy: sl_docker_<proxmox_host>_<vmid>_<container_name>
-    topic_prefix = f"sl_docker_{ID_PROXMOX}_{PROXMOX_VMID}_{safe_name}"
+    topic_prefix = f"sentrylab_{ID_PROXMOX}_{PROXMOX_VMID}_{safe_name}"
     
     # Get container image info
     try:
@@ -280,6 +293,8 @@ def main():
     logger.info("SentryLab-Docker Discovery starting...")
     logger.info(f"Device: {DEVICE_NAME} ({DEVICE_ID})")
     
+    DEBUG = True
+
     if DEBUG:
         logger.info("DEBUG mode enabled - no MQTT transmission")
     
