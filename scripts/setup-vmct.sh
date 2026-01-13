@@ -242,7 +242,6 @@ if [ -n "${BROKER:-}" ] && type mqtt_publish_retain >/dev/null 2>&1; then
     mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
 fi
 
-
 # Generate device identifiers matching topic hierarchy: sl_docker/<proxmox_node>/<vmid>
 DEVICE_NAME="Docker ${VM_NAME} (${ID_PROXMOX})"
 DEVICE_ID="docker_${ID_PROXMOX}_${VMID}"
@@ -375,10 +374,6 @@ if [ "$S_VMCT_STATUS" = "running" ]; then
         # Skip Docker-related tasks
     fi
 
-
-    box_line "✓ Docker is $S_DOCKER_STATUS"
-
-
     # Publish Docker status discovery and data (running)
 
 
@@ -409,27 +404,35 @@ if [ "$S_VMCT_STATUS" = "running" ]; then
         mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
         
 
+        # Publish Docker version discovery
+
         HA_ID="sentrylab_${ID_PROXMOX}_${VMID}_docker_version"
-        HA_LABEL=$(translate "docker_version")
-        VAL_TOPIC="sentrylab/${ID_PROXMOX}/${VMID}/docker"
         CFG_TOPIC="${HA_DISCOVERY_PREFIX}/sensor/${HA_ID}/config"
-        # Publish Docker status discovery
-        PAYLOAD=$(jq -n \
-            --arg name "$HA_LABEL" \
-            --arg unique_id "$HA_ID" \
-            --arg object_id "$HA_ID" \
-            --arg topic "$VAL_TOPIC" \
-            --argjson dev "$DEVICE_JSON" \
-            '{
-                name: $name,
-                unique_id: $unique_id,
-                object_id: $unique_id,
-                state_topic: $topic,
-                value_template: "{{ value_json.version }}",
-                json_attributes_topic: $topic,
-                device: $dev,
-                icon: "mdi:docker"
-            }')
+        if [ "$DOCKER_AVAILABLE" = true ]; then
+            box_line "Publishing Docker version discovery."
+            HA_LABEL=$(translate "docker_version")
+            VAL_TOPIC="sentrylab/${ID_PROXMOX}/${VMID}/docker"
+            # Publish Docker status discovery
+            PAYLOAD=$(jq -n \
+                --arg name "$HA_LABEL" \
+                --arg unique_id "$HA_ID" \
+                --arg object_id "$HA_ID" \
+                --arg topic "$VAL_TOPIC" \
+                --argjson dev "$DEVICE_JSON" \
+                '{
+                    name: $name,
+                    unique_id: $unique_id,
+                    object_id: $unique_id,
+                    state_topic: $topic,
+                    value_template: "{{ value_json.version }}",
+                    json_attributes_topic: $topic,
+                    device: $dev,
+                    icon: "mdi:docker"
+                }')
+        else
+            box_line "Removing eventual existing Docker version discovery."
+            $PAYLOAD=""
+        fi
         mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
 
 
