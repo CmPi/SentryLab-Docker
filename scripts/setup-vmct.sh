@@ -429,12 +429,11 @@ if [ "$S_VMCT_STATUS" = "running" ]; then
                     device: $dev,
                     icon: "mdi:docker"
                 }')
+            mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
         else
             box_line "Removing eventual existing Docker version discovery."
-            PAYLOAD=""
+            mqtt_publish "$CFG_TOPIC" ""
         fi
-        mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
-
 
         # Publish Docker status data (as JSON)
         box_line "Publishing Docker status state as a json... 02h07"
