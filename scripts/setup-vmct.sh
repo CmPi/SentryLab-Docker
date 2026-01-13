@@ -431,7 +431,7 @@ if [ "$S_VMCT_STATUS" = "running" ]; then
                 }')
         else
             box_line "Removing eventual existing Docker version discovery."
-            $PAYLOAD=""
+            PAYLOAD=""
         fi
         mqtt_publish_retain "$CFG_TOPIC" "$PAYLOAD"
 
