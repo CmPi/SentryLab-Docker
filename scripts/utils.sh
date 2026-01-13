@@ -276,14 +276,35 @@ mqtt_delete_safe() {
     fi
 
     # Run mosquitto_pub directly here so we can capture stderr for diagnostics
+    # Save shell option states and temporarily disable errexit/pipefail
+    local prev_errexit prev_pipefail
+    prev_errexit=$(set -o | awk '/errexit/ {print $2}')
+    prev_pipefail=$(set -o | awk '/pipefail/ {print $2}')
+    set +e
+    set +o pipefail 2>/dev/null || true
+
     local mqtt_err
     mqtt_err=$(mktemp)
-    if mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>"$mqtt_err" </dev/null; then
+    mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>"$mqtt_err" </dev/null
+    local rc=$?
+
+    # Restore previous shell options
+    if [[ "$prev_pipefail" == "on" ]]; then
+        set -o pipefail
+    else
+        set +o pipefail 2>/dev/null || true
+    fi
+    if [[ "$prev_errexit" == "on" ]]; then
+        set -e
+    else
+        set +e
+    fi
+
+    if [[ $rc -eq 0 ]]; then
         log_debug "mqtt_delete_safe: deleted $topic"
         rm -f "$mqtt_err"
         return 0
     else
-        local rc=$?
         echo "  ERROR: Failed to delete retained topic: $topic (exit code: $rc)" >&2
         if [[ -s "$mqtt_err" ]]; then
             echo "  mosquitto_pub output:" >&2
