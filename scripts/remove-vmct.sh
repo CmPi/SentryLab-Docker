@@ -150,3 +150,14 @@ echo ""
 box_line "✓ Removed $TOPICS_DELETED MQTT topics for VMID $VMID"
 box_end
 echo ""
+
+S_SUBTOPIC_LST=("total" "running" "stopped")
+for S_SUBTOPIC in "${S_SUBTOPIC_LST[@]}"; do
+    mqtt_delete_retained "homeassistant/sensor/docker_docker_albusnexus_$VMID/${S_SUBTOPIC}/config"
+done
+
+S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
+
+for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
+    mqtt_delete_retained "homeassistant/sensor/sl_docker_albusnexus_$VMID_${S_CONTAINER}_uptime/config"
+done
