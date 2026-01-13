@@ -269,16 +269,32 @@ mqtt_delete_safe() {
         echo "  Deleting: $topic"
     fi
 
-    if mqtt_delete_retained "$topic"; then
+    # If in DEBUG mode, don't actually talk to the broker
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+        box_line "SIMULATED - Would delete retained topic: $topic" "YELLOW"
+        return 0
+    fi
+
+    # Run mosquitto_pub directly here so we can capture stderr for diagnostics
+    local mqtt_err
+    mqtt_err=$(mktemp)
+    if mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>"$mqtt_err" </dev/null; then
         log_debug "mqtt_delete_safe: deleted $topic"
+        rm -f "$mqtt_err"
         return 0
     else
-        echo "  ERROR: Failed to delete retained topic: $topic" >&2
-        if [[ "${DEBUG:-false}" == "true" ]]; then
-            echo "  DEBUG: mosquitto_pub diagnostic:" >&2
-            mosquitto_pub -h "${BROKER:-}" -p "${PORT:-}" -u "${USER:-}" -P "${PASS:-}" -t "$topic" -n -r -q "${MQTT_QOS:-1}" 2>&1 </dev/null || true
+        local rc=$?
+        echo "  ERROR: Failed to delete retained topic: $topic (exit code: $rc)" >&2
+        if [[ -s "$mqtt_err" ]]; then
+            echo "  mosquitto_pub output:" >&2
+            while IFS= read -r line; do
+                echo "    $line" >&2
+            done < "$mqtt_err"
+        else
+            echo "  No output from mosquitto_pub." >&2
         fi
-        return 1
+        rm -f "$mqtt_err"
+        return $rc
     fi
 }
 
