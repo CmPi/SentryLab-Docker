@@ -132,8 +132,17 @@ for S_SUBTOPIC in "${S_SUBTOPIC_LST[@]}"; do
     if mqtt_delete_safe "homeassistant/sensor/docker_docker_albusnexus_$VMID/${S_SUBTOPIC}/config"; then ((TOPICS_DELETED++)); fi
 done
 
+
 S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
+S_ENTRIES_LST=("uptime" "image" "health")
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
-    if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_$VMID_${S_CONTAINER}_uptime/config"; then ((TOPICS_DELETED++)); fi
+    for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
+        if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_$VMID_${S_CONTAINER}_${S_ENTRY}/config"; 
+            then ((TOPICS_DELETED++)); 
+        fi
+        if mqtt_delete_safe "homeassistant/sensor/sentrylab_albusnexus_$VMID_${S_CONTAINER}_${S_ENTRY}/config"; 
+            then ((TOPICS_DELETED++)); 
+        fi
+    done
 done
