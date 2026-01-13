@@ -550,8 +550,8 @@ EOF
         # Start the service
 
         echo "Starting Docker monitoring service..."
-        # Use full paths for compose file and env file to avoid relying on cwd
-        exec_cmd bash -c "docker compose -f $DEPLOY_PATH/compose.yml --env-file $DEPLOY_PATH/.env up -d"
+        # Change to deploy path and run compose there to ensure files are found
+        exec_cmd bash -c "cd '$DEPLOY_PATH' && docker compose -f compose.yml --env-file .env up -d"
         echo "✓ Service started"
         echo ""
 

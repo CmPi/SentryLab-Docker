@@ -135,6 +135,7 @@ def publish_container_discovery(mqtt_client, container):
     binary_sensor_config = {
         "name": f"{container_name} Status",
         "unique_id": f"{topic_prefix}_status",
+        "object_id": f"{topic_prefix}_status",
         "state_topic": f"docker/{DEVICE_ID}/{container_name}/state",
         "value_template": "{{ value_json.running }}",
         "payload_on": "true",
@@ -147,6 +148,8 @@ def publish_container_discovery(mqtt_client, container):
     topic = f"{HA_BASE_TOPIC}/binary_sensor/{topic_prefix}_status/config"
     mqtt_client.publish(topic, json.dumps(binary_sensor_config), retain=True)
     logger.info(f"Published discovery for {container_name} status")
+    logger.info(f"topic: {topic}")
+    logger.info(f"unique_id/object_id: {topic_prefix}_status")
     
     # Sensor - State
     state_sensor_config = {
