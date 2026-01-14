@@ -133,8 +133,18 @@ for S_SUBTOPIC in "${S_SUBTOPIC_LST[@]}"; do
 done
 
 
+S_PREFIX_LST=("sl" "sentrylab")
 S_CONTAINER_LST=("portainer" "adguardhome" "amp_mysql" "amp_php" "mqtt" "sentrylab" "traefik")
 S_ENTRIES_LST=("uptime" "image" "health" "state" "deployed_time" "last_discovery_time" "last_monitor_time" "cpu_usage" "mem_usage" "net_in" "net_out" "disk_read" "disk_write")
+
+
+S_VM_PARAM_LST=("deployed_time" "last_discovery_time" "last_monitor_time" "cpu_usage" "mem_usage" "net_in" "net_out" "disk_read" "disk_write")
+
+for S_VM_PARAM in "${S_VM_PARAM_LST[@]}"; do
+    if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_${VMID}_${S_VM_PARAM}/config"; 
+done
+if mqtt_delete_safe "homeassistant/binary_sensor/sl_docker_albusnexus_${VMID}_deployed/config"; 
+
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
     for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
