@@ -165,8 +165,11 @@ for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
     if mqtt_delete_safe "homeassistant/binary_sensor/sentrylab_albusnexus_${VMID}_${S_CONTAINER}_status/config"; 
         then ((TOPICS_DELETED++)); 
     fi
+    if mqtt_delete_safe "homeassistant/binary_sensor/sl_docker_albusnexus_${VMID}_${S_CONTAINER}_status/config"; 
+        then ((TOPICS_DELETED++)); 
+    fi
 
-    if mqtt_delete_safe "homeassistant/sensor/docker__${S_CONTAINER}/version/config"; 
+    if mqtt_delete_safe "homeassistant/sensor/docker_${S_CONTAINER}/version/config"; 
         then ((TOPICS_DELETED++)); 
     fi
 
