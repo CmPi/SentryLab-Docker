@@ -151,7 +151,7 @@ fi
 
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
-    if mqtt_delete_safe "homeassistant/sensor/docker__${S_CONTAINER}/version/config"; 
+    if mqtt_delete_safe "homeassistant/sensor/docker_${S_CONTAINER}/version/config"; 
         then ((TOPICS_DELETED++)); 
     fi
     for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
