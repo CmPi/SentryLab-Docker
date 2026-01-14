@@ -142,11 +142,18 @@ S_VM_PARAM_LST=("deployed_time" "last_discovery_time" "last_monitor_time" "cpu_u
 
 for S_VM_PARAM in "${S_VM_PARAM_LST[@]}"; do
     if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_${VMID}_${S_VM_PARAM}/config"; 
+        then ((TOPICS_DELETED++)); 
+    fi
 done
 if mqtt_delete_safe "homeassistant/binary_sensor/sl_docker_albusnexus_${VMID}_deployed/config"; 
+    then ((TOPICS_DELETED++)); 
+fi
 
 
 for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
+    if mqtt_delete_safe "homeassistant/sensor/docker__${S_CONTAINER}/version/config"; 
+        then ((TOPICS_DELETED++)); 
+    fi
     for S_ENTRY in "${S_ENTRIES_LST[@]}"; do
         if mqtt_delete_safe "homeassistant/sensor/sl_docker_albusnexus_${VMID}_${S_CONTAINER}_${S_ENTRY}/config"; 
             then ((TOPICS_DELETED++)); 
@@ -159,4 +166,12 @@ for S_CONTAINER in "${S_CONTAINER_LST[@]}"; do
         then ((TOPICS_DELETED++)); 
     fi
 
+    if mqtt_delete_safe "homeassistant/sensor/docker__${S_CONTAINER}/version/config"; 
+        then ((TOPICS_DELETED++)); 
+    fi
+
+
 done
+
+box_line "✓ Removed $TOPICS_DELETED MQTT topics for VMID $VMID"
+box_end
